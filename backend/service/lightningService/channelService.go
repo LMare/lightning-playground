@@ -23,7 +23,7 @@ func AddPeer(dataClient nodeModel.LndClientAuthData, uri string) error {
     defer conn.Close()
 
 	parts := strings.Split(uri, "@")
-	_, err = client.ConnectPeer(context.Background(), &lnrpc.ConnectPeerRequest{Addr: &lnrpc.LightningAddress{Pubkey: parts[0], Host: parts[1],},})
+	_, err = client.ConnectPeer(context.Background(), &lnrpc.ConnectPeerRequest{Addr: &lnrpc.LightningAddress{Pubkey: parts[0], Host: parts[1],}, Perm: true,})
 	if err != nil {
 		return exception.NewError("Error on adding a peer", err, exception.NewExampleError)
 	}

@@ -8,16 +8,17 @@ import (
 	"fmt"
 	"reflect"
 	"encoding/json"
+	//"time"
 	lnrpc "github.com/Lmare/lightning-test/backend/gRPC/github.com/lightningnetwork/lnd/lnrpc"
 
 
 	//exception "github.com/Lmare/lightning-test/backend/exception"
 )
-
+/*
 type Stream interface {
     Recv() (any, error)
     Close() error
-}
+}*/
 
 // gereric structure for the stream
 type StreamWrapper[T any] struct {
@@ -38,9 +39,34 @@ func (s StreamWrapper[T]) Close() error {
 // TODO have une struct Envelop to have a batch garbage Collector in case
 var sessionChannelMap = sync.Map{}
 
+
+/** TODO: GESTION Multi-Onglet
+	comment structurer ça correctement dans mon code ?
+	J'ai une map qui pour le moment associe un canal à un utilistateur pour centraliser la production des notifications (je ferais surement un petit wrapper plus tart pour gérer différents types d'event, faut pas monter trop rapidement en complexité ^^')
+	j'ai une map de liste de connexion SSE (http.ResponseWriter)
+	J'ai un handler qui à la création ou détruction de la requête souscrit ou revoque l'abonnement au évenement.
+	Et du coup il me faut plus qu'une go routine (créé à l'initialisation de la session) qui permet de de flush dans les ResponseWriter dès que des messages arrives dans le canal.
+
+	🛠️ Points d’attention
+	- Utilise des canaux bufferisés (make(chan Event, N)) pour éviter de bloquer les producteurs si le consommateur est lent.
+	- Ajoute un ping/keep‑alive régulier pour maintenir la connexion ouverte (et éviter que des proxies la coupent).
+	- Surveille la taille des listes de clients pour éviter les fuites mémoire si un utilisateur ouvre/ferme beaucoup d’onglets.
+
+
+
+	donc du coup avec cette configuration là j'ai les notifications sur tous les onglets.
+	je me suis dit que si je veux des nofitications qui s'affiche uniquement sur certain onglets je peux faire ça : (note j'utilise HTMX, mais on pourrait avoir plus ou moin la même logique en rest classique)
+	dans le fait une action qui produit un stream gRPC, je génère un uuid que je met dans mon StreamWrapper,
+	je retourne au navigateur du html qui defini une class css qui dépends de cett uuid qui fait un display block.
+	dans les event SSE je génère une envelopper HTML sur le message qui ajoute une classe pour mettre les notif mono-onglet en display none + la classe unique qui permet d'afficher seulement dans l'onglet qui contient la définition.
+*/
+
+
+
 func GetChannel(sessionId string) chan string{
 	channel, ok := sessionChannelMap.Load(sessionId)
 	if !ok {
+		fmt.Println("initialisation du chanel")
 		channel = make(chan string)
 		sessionChannelMap.Store(sessionId, channel)
 	}
@@ -56,15 +82,16 @@ func StreamResult[T any](stream StreamWrapper[T]) {
         for {
             msg, err := stream.Recv()
 			if err == io.EOF {
+				fmt.Println("fin de la goRoutine")
 				break // stream terminé
-			}
-            if err != nil {
+			} else if err != nil {
 				fmt.Println("Erreur sur le stream", err)
-                channel <-fmt.Sprintf(" Erreur : %s", err)
+                channel <- fmt.Sprintf("Erreur : %s", err)
 				break
-            }
-			fmt.Println("Stream Data", msg)
-            channel <- encode(msg)
+            } else {
+				fmt.Println("Data", msg)
+	            channel <- encode(msg)
+			}
         }
     }()
 }

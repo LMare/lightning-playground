@@ -22,6 +22,12 @@
 			 <div id="toaster"></div>
 		</div>
 
+		<!-- TODO : mettre dans le toaster ? -->
+		<div hx-ext="sse" sse-connect="api/stream-event" >
+		  <div sse-swap="message"></div>
+		  <div sse-swap="error"></div>
+		</div>
+
 		<h1 class="text-3xl font-bold mb-6">Lightning-test Project</h1>
 
 		<div class="navbar bg-base-100 rounded-box" >
