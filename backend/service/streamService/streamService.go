@@ -8,17 +8,20 @@ import (
 	"fmt"
 	"reflect"
 	"encoding/json"
+	"net/http"
+	"strings"
+
 	//"time"
 	lnrpc "github.com/Lmare/lightning-test/backend/gRPC/github.com/lightningnetwork/lnd/lnrpc"
 
 
 	//exception "github.com/Lmare/lightning-test/backend/exception"
 )
-/*
-type Stream interface {
+
+type istream interface {
     Recv() (any, error)
     Close() error
-}*/
+}
 
 // gereric structure for the stream
 type StreamWrapper[T any] struct {
@@ -33,24 +36,110 @@ func (s StreamWrapper[T]) Close() error {
     return s.CloseCallback()
 }
 
+// --------------------------------------------
 
-// save server stream
-// map[string]StreamWrapper
-// TODO have une struct Envelop to have a batch garbage Collector in case
-var sessionChannelMap = sync.Map{}
+type isession interface{
+	add(http.ResponseWriter)
+	remove(http.ResponseWriter)
+	notifyAll(string)
+	start()
+	stream(istream)
+}
+
+type session struct {
+	channel		chan string
+	muSseList	sync.Mutex
+	sseList		[]http.ResponseWriter
+}
+// add a sse
+func (s *session) add(sse http.ResponseWriter) {
+	s.muSseList.Lock()
+	s.sseList = append(s.sseList, sse)
+	s.muSseList.Unlock()
+}
+
+// remove a sse
+func (s *session) remove(sse http.ResponseWriter) {
+	s.muSseList.Lock()
+	for i, w := range s.sseList {
+		if w == sse {
+			s.sseList = append(s.sseList[:i], s.sseList[i+1:]...)
+			break
+		}
+	}
+	s.muSseList.Unlock()
+}
+
+// send an event in all SSE
+func (s *session) notifyAll(msg string) { // TODO : prévoir un type ?
+	s.muSseList.Lock()
+	for _, w := range s.sseList {
+		fmt.Fprintf(w, "data: %s\n\n", strings.ReplaceAll(msg, "\n", " "))
+		w.(http.Flusher).Flush()
+	}
+	s.muSseList.Unlock()
+}
+
+// listen incoming message in the channel and notify all the sse clients
+func (s *session) start() {
+	go func() {
+		for {
+			select {
+			case msg := <- s.channel :
+				// Push SSE
+				fmt.Printf("Message brut envoyé : %#v\n", strings.ReplaceAll(msg, "\n", " "))
+				s.notifyAll(msg)
+			}
+		}
+	}()
+}
+
+// stream a ressource into the channel of the session
+func(se *session) stream(st istream){
+	go func() {
+		for {
+			msg, err := st.Recv()
+			if err == io.EOF {
+				fmt.Println("fin de la goRoutine")
+				break // stream terminé
+			} else if err != nil {
+				fmt.Println("Erreur sur le stream", err)
+				se.channel <- fmt.Sprintf("Erreur : %s", err)
+				break
+			} else {
+				fmt.Println("Data", msg)
+				se.channel <- encode(msg)
+			}
+		}
+	}()
+}
 
 
-/** TODO: GESTION Multi-Onglet
-	comment structurer ça correctement dans mon code ?
-	J'ai une map qui pour le moment associe un canal à un utilistateur pour centraliser la production des notifications (je ferais surement un petit wrapper plus tart pour gérer différents types d'event, faut pas monter trop rapidement en complexité ^^')
-	j'ai une map de liste de connexion SSE (http.ResponseWriter)
-	J'ai un handler qui à la création ou détruction de la requête souscrit ou revoque l'abonnement au évenement.
-	Et du coup il me faut plus qu'une go routine (créé à l'initialisation de la session) qui permet de de flush dans les ResponseWriter dès que des messages arrives dans le canal.
+// --------------------------------------------------------------
 
+
+// channel for the session
+// map[string]*session
+var sessions = sync.Map{}
+
+func SubscribeSse(sse http.ResponseWriter) {
+	id := "uniqueSession"
+	session := getSession(id)
+	session.add(sse)
+}
+
+func RevoqueSse(sse http.ResponseWriter){
+	id := "uniqueSession"
+	session := getSession(id)
+	session.remove(sse)
+}
+
+/** TODO:
 	🛠️ Points d’attention
 	- Utilise des canaux bufferisés (make(chan Event, N)) pour éviter de bloquer les producteurs si le consommateur est lent.
 	- Ajoute un ping/keep‑alive régulier pour maintenir la connexion ouverte (et éviter que des proxies la coupent).
 	- Surveille la taille des listes de clients pour éviter les fuites mémoire si un utilisateur ouvre/ferme beaucoup d’onglets.
+	- Garbage collector pour supprimer les sessions si aucun client existant
 
 
 
@@ -63,37 +152,24 @@ var sessionChannelMap = sync.Map{}
 
 
 
-func GetChannel(sessionId string) chan string{
-	channel, ok := sessionChannelMap.Load(sessionId)
+func getSession(sessionId string) isession{
+	s, ok := sessions.Load(sessionId)
 	if !ok {
-		fmt.Println("initialisation du chanel")
-		channel = make(chan string)
-		sessionChannelMap.Store(sessionId, channel)
+		fmt.Println("initialisation de la session")
+		s2 := &session{channel: make(chan string), sseList: make([]http.ResponseWriter, 0),}
+		sessions.Store(sessionId, s2)
+		s2.start()
+		return s2
 	}
-	return channel.(chan string)
+	return s.(isession)
 }
 
 // save the steam in context of the server
 func StreamResult[T any](stream StreamWrapper[T]) {
 	//id := uuid.New().String()
 	id := "uniqueSession"
-	channel := GetChannel(id)
-	go func() {
-        for {
-            msg, err := stream.Recv()
-			if err == io.EOF {
-				fmt.Println("fin de la goRoutine")
-				break // stream terminé
-			} else if err != nil {
-				fmt.Println("Erreur sur le stream", err)
-                channel <- fmt.Sprintf("Erreur : %s", err)
-				break
-            } else {
-				fmt.Println("Data", msg)
-	            channel <- encode(msg)
-			}
-        }
-    }()
+	session := getSession(id)
+	session.stream(stream)
 }
 
 // ------

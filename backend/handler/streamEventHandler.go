@@ -4,7 +4,6 @@ package handler
 import (
 	"fmt"
 	"net/http"
-	"strings"
 
 
 	streamService "github.com/Lmare/lightning-test/backend/service/streamService"
@@ -21,20 +20,15 @@ func handleStreamEvent(response http.ResponseWriter, request *http.Request) {
 	response.(http.Flusher).Flush()
 
 	notify := request.Context().Done()
+	// inscription au flux de notification
+	streamService.SubscribeSse(response)
 
-
-	id := "uniqueSession"
-	channel := streamService.GetChannel(id)
-
+	// let the connexion open until an interruption
 	for {
 		select {
-		case msg := <-channel :
-			// Push SSE
-			fmt.Fprintf(response, "data: %s\n\n", strings.ReplaceAll(msg, "\n", " "))
-			fmt.Printf("Message brut envoyé : %#v\n", strings.ReplaceAll(msg, "\n", " "))
-			response.(http.Flusher).Flush()
 		case <-notify:
 			fmt.Println("Client SSE déconnecté")
+			streamService.RevoqueSse(response)
 			return
 	    }
 	}

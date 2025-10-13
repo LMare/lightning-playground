@@ -6,6 +6,7 @@ Little personnal projet to discover and improve skill on  :
     - gRPC
     - Lnd
     - HTMX
+	- SSE
 
 
 ## Prupose
