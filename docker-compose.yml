@@ -1,6 +1,23 @@
 version: '3.3'
 
 services:
+  backend1:
+    build:
+      context: .
+      dockerfile: ./backend/Dockerfile
+    container_name: backend1
+    hostname: backend1
+
+
+  frontend1:
+    build:
+      context: .
+      dockerfile: ./frontend/Dockerfile
+    container_name: frontend1
+    hostname: frontend1
+    ports:
+      - "${FRONTEND_PORT}:${FRONTEND_PORT}"
+
   btcd:
     image: btcsuite/btcd:latest
     container_name: btcd

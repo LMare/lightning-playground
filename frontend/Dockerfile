@@ -9,6 +9,7 @@ RUN CGO_ENABLED=0 go build -o app-frontend ./cmd/frontend
 
 # 2. Construction de l'image finale
 FROM scratch
-COPY --from=Builder /app/app-frontend  /app/.env /
-COPY frontend /frontend/
-ENTRYPOINT ["/app-frontend"]
+WORKDIR /app
+COPY --from=Builder /app/app-frontend  /app/.env ./
+COPY frontend ./frontend/
+ENTRYPOINT ["/app/app-frontend"]

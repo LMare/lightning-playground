@@ -1,3 +1,4 @@
 backend/Dockerfile
 frontend/Dockerfile
-
+docker-compose.yml
+.local-frontend

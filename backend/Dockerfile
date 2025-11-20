@@ -9,5 +9,7 @@ RUN CGO_ENABLED=0 go build -o app-backend ./cmd/backend
 
 # 2. Construction de l'image finale
 FROM scratch
-COPY --from=Builder /app/app-backend /app/.env /
-ENTRYPOINT ["/app-backend"]
+WORKDIR /app
+COPY --from=Builder /app/app-backend /app/.env /app/nodes.yaml ./
+COPY backend/templates ./backend/templates/
+ENTRYPOINT ["/app/app-backend"]
