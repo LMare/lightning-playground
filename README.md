@@ -2,12 +2,12 @@
 # LIGHTNING-TEST
 
 Little personnal projet to discover and improve skill on  :
-    - Golang
-    - gRPC
-    - Lnd
-    - HTMX
-	- SSE
-	- dockerfile & docker compose
+  - Golang
+  - gRPC
+  - Lnd
+  - HTMX
+  - SSE
+  - dockerfile & docker compose
 
 
 ## Prupose
@@ -20,7 +20,7 @@ docker-compose up -d --build
 Go to : http://localhost:3000/
 
 ### First launch
-To use the lnd fonctionality, you will need at least 2 lnd nodes with a wallet :
+To use the lnd fonctionalities, you will need at least 2 lnd nodes with a wallet :
 ```bash
 docker exec -it lnd1 lncli --network=simnet create
 docker exec -it lnd2 lncli --network=simnet create
@@ -30,7 +30,7 @@ To mine with one of these address do :
 ```bash
 docker exec -it lnd1 lncli --network=simnet newaddress np2wkh
 ```
-Copy the address then replace the value of `miningaddr` in the service `btcd` of `docker-compose.yml`/
+Copy the address then replace the value of `miningaddr` in the service `btcd` of `docker-compose.yml`.
 
 Mine enough block to activate taproot
 ```bash
@@ -57,6 +57,6 @@ docker-compose down
 ```
 
 
-# TODO List of Ideas :
-	- update the label and the color of a node (http://github.com/LMare/lightning-test/issues/1):
-		* Need to update the code of lnd to expose a gRPC method to do that
+## TODO List of Ideas :
+  - update the label and the color of a node (http://github.com/LMare/lightning-test/issues/1):
+    * Need to update the code of lnd to expose a gRPC method to do that

@@ -36,9 +36,6 @@ services:
       # address récompense de minage pour la génération de bloc auto en simnet
       #       lncli --network=simnet newaddress np2wkh
       - --miningaddr=sb1q86m66vgfj2f600fap8e28hpk7c0ezkcvruhsnh
-    ports:
-      - "18556:18556"
-      - "18555:18555"
     volumes:
       - btcd_data:/root/.btcd
 
@@ -61,12 +58,8 @@ services:
       - --watchtower.active
       - --watchtower.externalip=lndtower:9911
       - --rpclisten=0.0.0.0:10009                   # exposition du port à l'extérieur
-      - --externalip=lnd1:10009                     # uris pour le getinfo
+      - --externalip=lnd1:9735                      # uris pour le getinfo
       - --tlsextradomain=lnd1                       # domaine pour le certificat
-
-    ports:
-      - "10009:10009"
-      - "9735:9735"
     volumes:
       - lnd1_data:/root/.lnd
       - btcd_data:/root/.btcd       # pour avoir le certificat de btcd
@@ -90,12 +83,8 @@ services:
       - --watchtower.active
       - --watchtower.externalip=lndtower:9911
       - --rpclisten=0.0.0.0:10009
-      - --externalip=lnd2:10009
+      - --externalip=lnd2:9735
       - --tlsextradomain=lnd2                       # domaine pour le certificat
-
-    ports:
-      - "10010:10009"
-      - "9736:9735"
     volumes:
       - lnd2_data:/root/.lnd
       - btcd_data:/root/.btcd
@@ -114,9 +103,7 @@ services:
       - --btcd.rpcuser=user
       - --btcd.rpcpass=pass
       - --rpclisten=0.0.0.0:10009
-      - --externalip=lnd2:10009
-    ports:
-      - "9911:9911"
+      - --externalip=lndtower:9735
     volumes:
       - tower_data:/root/.lnd
 
