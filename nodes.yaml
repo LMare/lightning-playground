@@ -3,12 +3,12 @@
 nodes:
     -   id: 1
         data:
-            cert: nodes-storage/lnd1/cert/tls.cert
-            macaroon: nodes-storage/lnd1/macaroons/admin.macaroon
-            url: localhost:10009
+            cert: nodes-storage/.lnd1/tls.cert
+            macaroon: nodes-storage/.lnd1/data/chain/bitcoin/simnet/admin.macaroon
+            url: lnd1:10009
 
     -   id: 2
         data:
-            cert: nodes-storage/lnd2/cert/tls.cert
-            macaroon: nodes-storage/lnd2/macaroons/admin.macaroon
-            url: localhost:10010
+            cert: nodes-storage/.lnd2/tls.cert
+            macaroon: nodes-storage/.lnd2/data/chain/bitcoin/simnet/admin.macaroon
+            url: lnd2:10009

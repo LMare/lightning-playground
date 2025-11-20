@@ -7,7 +7,9 @@ services:
       dockerfile: ./backend/Dockerfile
     container_name: backend1
     hostname: backend1
-
+    volumes:
+      - lnd1_data:/app/nodes-storage/.lnd1
+      - lnd2_data:/app/nodes-storage/.lnd2
 
   frontend1:
     build:
@@ -60,6 +62,7 @@ services:
       - --watchtower.externalip=lndtower:9911
       - --rpclisten=0.0.0.0:10009                   # exposition du port à l'extérieur
       - --externalip=lnd1:10009                     # uris pour le getinfo
+      - --tlsextradomain=lnd1                       # domaine pour le certificat
 
     ports:
       - "10009:10009"
@@ -88,6 +91,7 @@ services:
       - --watchtower.externalip=lndtower:9911
       - --rpclisten=0.0.0.0:10009
       - --externalip=lnd2:10009
+      - --tlsextradomain=lnd2                       # domaine pour le certificat
 
     ports:
       - "10010:10009"
