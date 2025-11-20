@@ -5,6 +5,7 @@ services:
     build:
       context: .
       dockerfile: ./backend/Dockerfile
+    image: LMare/lightning-test-backend:dev
     container_name: backend1
     hostname: backend1
     volumes:
@@ -15,13 +16,17 @@ services:
     build:
       context: .
       dockerfile: ./frontend/Dockerfile
+    image: LMare/lightning-test-frontend:dev
     container_name: frontend1
     hostname: frontend1
     ports:
       - "${FRONTEND_PORT}:${FRONTEND_PORT}"
 
   btcd:
-    image: btcsuite/btcd:latest
+    build:
+      context: https://github.com/btcsuite/btcd.git#v0.25.0
+      dockerfile: Dockerfile
+    image: btcsuite/btcd:v0.25.0
     container_name: btcd
     hostname: btcd
     command:

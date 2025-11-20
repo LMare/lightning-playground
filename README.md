@@ -15,6 +15,8 @@ Be able to do a little web application to interract with and a lightning serveur
 
 ## Lauch the app
 ```bash
+docker-compose up -d
+# or for development
 docker-compose up -d --build
 ```
 Go to : http://localhost:3000/
