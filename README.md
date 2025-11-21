@@ -1,7 +1,7 @@
 
-# LIGHTNING-TEST
+# Lightning Playground
 
-Little personnal projet to discover and improve skill on  :
+Personnal projet to discover and improve skill on  :
   - Golang
   - gRPC
   - Lnd
@@ -9,6 +9,13 @@ Little personnal projet to discover and improve skill on  :
   - SSE
   - dockerfile & docker compose
 
+TODO :
+  - TU in Go
+  - extend gRPC API
+  - CI/CD
+  - kubernetes
+  - infra as code (Terraform + Kind)
+  - do module with Go
 
 ## Prupose
 Be able to do a little web application to interract with and a lightning serveur running on simnet
