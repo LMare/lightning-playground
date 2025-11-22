@@ -24,7 +24,7 @@ Be able to do a little web application to interract with and a lightning serveur
 ```bash
 docker-compose up -d
 # or for development
-docker-compose up -d --build
+docker-compose up -d --build frontend1 backend1
 ```
 Go to : http://localhost:3000/
 
@@ -68,6 +68,18 @@ docker exec -it lightning-playground_btcd_1 btcctl --simnet generate 1
 ```bash
 docker-compose down
 ```
+
+## Using the application
+Steps :
+ 1. Add new pair with the URI of other nodes
+ 2. Create channels between pairs.
+    After creating the channel to pass it in `active` state, generate some blocs with :
+```bash
+docker exec -it lightning-playground_btcd_1 btcctl --simnet generate 10
+```
+  3. Generate an invoice
+  4. Import the invoice on another node and pay-it 
+
 
 
 ## TODO List of Ideas :
