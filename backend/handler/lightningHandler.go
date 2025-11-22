@@ -282,7 +282,7 @@ func handleMakePaiment(response http.ResponseWriter, request *http.Request) {
 	}
 
 }
-
+ 
 
 
 // Update name of the node & color
