@@ -1,5 +1,5 @@
 ### Utiliser comme ceci pour générer l'image
-### docker build -t lightning-test-frontend:latest -f frontend/Dockerfile .
+### docker build -t lightning-playground-frontend:latest -f frontend/Dockerfile .
 
 # 1. Build de l'application backend
 FROM golang:1.25.4-alpine3.22 as Builder

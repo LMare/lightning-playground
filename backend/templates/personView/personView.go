@@ -1,7 +1,7 @@
 package personView
 
 
-import "github.com/Lmare/lightning-test/backend/model/personne"
+import "github.com/Lmare/lightning-playground/backend/model/personne"
 
 type PersonView struct {
 	Index int

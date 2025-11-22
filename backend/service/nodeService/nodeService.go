@@ -5,9 +5,9 @@ import (
 	"os"
 	"fmt"
 
-	config "github.com/Lmare/lightning-test"
-	exception "github.com/Lmare/lightning-test/backend/exception"
-	nodeModel "github.com/Lmare/lightning-test/backend/model/nodeModel"
+	config "github.com/Lmare/lightning-playground"
+	exception "github.com/Lmare/lightning-playground/backend/exception"
+	nodeModel "github.com/Lmare/lightning-playground/backend/model/nodeModel"
 )
 
 

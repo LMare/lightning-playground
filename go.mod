@@ -1,4 +1,4 @@
-module github.com/Lmare/lightning-test
+module github.com/Lmare/lightning-playground
 
 go 1.25.0
 

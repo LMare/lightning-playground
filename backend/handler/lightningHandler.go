@@ -7,8 +7,8 @@ import (
 	"html/template"
 	"strings"
 
-	lightningService "github.com/Lmare/lightning-test/backend/service/lightningService"
-	nodeService "github.com/Lmare/lightning-test/backend/service/nodeService"
+	lightningService "github.com/Lmare/lightning-playground/backend/service/lightningService"
+	nodeService "github.com/Lmare/lightning-playground/backend/service/nodeService"
 )
 
 // get the list of node

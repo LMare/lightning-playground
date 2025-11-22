@@ -67,5 +67,5 @@ docker-compose down
 
 
 ## TODO List of Ideas :
-  - update the label and the color of a node (http://github.com/LMare/lightning-test/issues/1):
+  - update the label and the color of a node (http://github.com/LMare/lightning-playground/issues/1):
     * Need to update the code of lnd to expose a gRPC method to do that

@@ -6,7 +6,7 @@ import (
 	"net/http"
 
 
-	streamService "github.com/Lmare/lightning-test/backend/service/streamService"
+	streamService "github.com/Lmare/lightning-playground/backend/service/streamService"
 )
 
 // check the message from gRPC stream

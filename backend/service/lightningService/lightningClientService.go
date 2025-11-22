@@ -9,10 +9,10 @@ import (
 
     "google.golang.org/grpc"
     "google.golang.org/grpc/credentials"
-    lnrpc "github.com/Lmare/lightning-test/backend/gRPC/github.com/lightningnetwork/lnd/lnrpc"
-	routerrpc "github.com/Lmare/lightning-test/backend/gRPC/github.com/lightningnetwork/lnd/lnrpc/routerrpc"
-	exception "github.com/Lmare/lightning-test/backend/exception"
-	nodeModel "github.com/Lmare/lightning-test/backend/model/nodeModel"
+    lnrpc "github.com/Lmare/lightning-playground/backend/gRPC/github.com/lightningnetwork/lnd/lnrpc"
+	routerrpc "github.com/Lmare/lightning-playground/backend/gRPC/github.com/lightningnetwork/lnd/lnrpc/routerrpc"
+	exception "github.com/Lmare/lightning-playground/backend/exception"
+	nodeModel "github.com/Lmare/lightning-playground/backend/model/nodeModel"
 )
 
 

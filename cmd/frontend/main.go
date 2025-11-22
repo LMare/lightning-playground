@@ -12,7 +12,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	config "github.com/Lmare/lightning-test"
+	config "github.com/Lmare/lightning-playground"
 )
 
 func main() {

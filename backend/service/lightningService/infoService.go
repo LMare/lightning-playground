@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	lnrpc "github.com/Lmare/lightning-test/backend/gRPC/github.com/lightningnetwork/lnd/lnrpc"
-	exception "github.com/Lmare/lightning-test/backend/exception"
-	nodeModel "github.com/Lmare/lightning-test/backend/model/nodeModel"
+	lnrpc "github.com/Lmare/lightning-playground/backend/gRPC/github.com/lightningnetwork/lnd/lnrpc"
+	exception "github.com/Lmare/lightning-playground/backend/exception"
+	nodeModel "github.com/Lmare/lightning-playground/backend/model/nodeModel"
 )
 
 type InfoLndNode struct {

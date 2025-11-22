@@ -5,9 +5,9 @@ import (
 	"log"
 	"net/http"
 
-	config "github.com/Lmare/lightning-test"
-	handler "github.com/Lmare/lightning-test/backend/handler"
-	exception "github.com/Lmare/lightning-test/backend/exception"
+	config "github.com/Lmare/lightning-playground"
+	handler "github.com/Lmare/lightning-playground/backend/handler"
+	exception "github.com/Lmare/lightning-playground/backend/exception"
 )
 
 func main() {

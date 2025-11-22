@@ -3,8 +3,8 @@ package handler
 import (
 	"net/http"
 
-	"github.com/Lmare/lightning-test/backend/service/personneService"
-	"github.com/Lmare/lightning-test/backend/templates/personView"
+	"github.com/Lmare/lightning-playground/backend/service/personneService"
+	"github.com/Lmare/lightning-playground/backend/templates/personView"
 )
 
 func HandleListPersonne(response http.ResponseWriter, request *http.Request) {

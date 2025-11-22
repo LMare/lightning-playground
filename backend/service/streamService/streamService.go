@@ -12,10 +12,10 @@ import (
 	"strings"
 
 	//"time"
-	lnrpc "github.com/Lmare/lightning-test/backend/gRPC/github.com/lightningnetwork/lnd/lnrpc"
+	lnrpc "github.com/Lmare/lightning-playground/backend/gRPC/github.com/lightningnetwork/lnd/lnrpc"
 
 
-	//exception "github.com/Lmare/lightning-test/backend/exception"
+	//exception "github.com/Lmare/lightning-playground/backend/exception"
 )
 
 type istream interface {

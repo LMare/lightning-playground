@@ -63,7 +63,7 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 func HandleRoot(response http.ResponseWriter, request *http.Request) {
 
 	html := `
-	<h1>Lightning-test</h1>
+	<h1>Lightning-playground</h1>
 	<p>
 		Bienvenue sur le backend de cette application!
 	</p>
