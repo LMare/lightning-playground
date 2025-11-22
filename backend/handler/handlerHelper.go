@@ -21,14 +21,6 @@ func fail(response http.ResponseWriter, request *http.Request, message string, e
 	}
 }
 
-func htmxStreamEvent(response http.ResponseWriter, request *http.Request, streamId string) {
-	if IsHTMX(request) {
-		htmxResponse(response, "action/streamEvent.html", streamId)
-	} else {
-		jsonResponse(response, streamId)
-	}
-}
-
 
 // Transform the objet as a Json and put it in the reponse
 func jsonResponse(response http.ResponseWriter, objet any) {

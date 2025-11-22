@@ -274,8 +274,13 @@ func handleMakePaiment(response http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	// TODO have a jwt token on the streamId depending of the connected User
-	htmxStreamEvent(response, request, "")
+	// TODO have a streamId to return ?
+	if IsHTMX(request) {
+		htmxMessageOk(response, "Processing in progress")
+	} else {
+		OkNoContent(response)
+	}
+
 }
 
 
