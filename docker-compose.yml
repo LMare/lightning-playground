@@ -37,9 +37,10 @@ services:
       - --txindex
       # address récompense de minage pour la génération de bloc auto en simnet
       #       lncli --network=simnet newaddress np2wkh
-      - --miningaddr=sb1q86m66vgfj2f600fap8e28hpk7c0ezkcvruhsnh
+      - --miningaddr=rneZnvYmrLg9V6seGghNXmdfzatNsHgb54
     volumes:
       - btcd_data:/root/.btcd
+      - ./btcd.conf:/root/.btcd/btcd.conf   # To simplify the cmd btcctl 
 
   lnd1:
     image: lightninglabs/lnd:v0.19.3-beta.rc2

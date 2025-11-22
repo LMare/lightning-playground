@@ -40,6 +40,10 @@ To mine with one of these address do :
 docker exec -it lightning-playground_lnd1_1 lncli --network=simnet newaddress np2wkh
 ```
 Copy the address then replace the value of `miningaddr` in the service `btcd` of `docker-compose.yml`.
+And reload the containers
+```bash
+docker-compose up -d
+```
 
 Mine enough block to activate taproot
 ```bash
