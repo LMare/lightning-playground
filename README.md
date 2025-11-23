@@ -7,7 +7,9 @@ Personnal projet to discover and improve skill on  :
   - Lnd
   - HTMX
   - SSE
-  - dockerfile & docker compose
+  - dockerfile
+  - docker compose
+  - docker bake
 
 TODO :
   - TU in Go
@@ -21,10 +23,10 @@ TODO :
 Be able to do a little web application to interract with and a lightning serveur running on simnet
 
 ## Lauch the app
+
 ```bash
+docker buildx bake
 docker compose up -d
-# or for development
-docker compose up -d --build frontend1 backend1
 ```
 Go to : http://localhost:3000/
 

@@ -1,8 +1,3 @@
-#conf local
-export PATH="$PATH:$HOME/Perso/Outils/go1.25.0.windows-amd64/go/bin"
-export PATH="$PATH:$HOME/go/bin/"
-export PATH="$PATH:$HOME/Perso/Outils/gprotoc-32.0-win64/bin"
-
 
 #Exécuter localement
 go run ./cmd/backend
@@ -48,3 +43,7 @@ docker cp lnd1:/root/.lnd/data/chain/bitcoin/simnet/readonly.macaroon .
 
 #Activate taproot by gererating some blocks in simnet (note : new coinbase need a maturity of 100 to be avairiable)
 docker exec -it btcd btcctl --simnet generate 1500
+
+
+# purge docker
+docker image prune -f && docker builder prune

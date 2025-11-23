@@ -1,11 +1,11 @@
 ### Utiliser comme ceci pour générer l'image
 ### docker build -t lightning-playground-backend:latest -f backend/Dockerfile .
 
-ARG ALPINE_VERSION=3.22
-ARG GO_VERSION=1.0.0
+ARG ALPINE_TAG=3.22
+ARG GO_TAG=1.0.0
 
 # 1. Source Go l'application backend
-FROM golang:$GO_VERSION AS compiler
+FROM golang:$GO_TAG AS compiler
 ARG COMPILATION=static
 ENV COMPILATION=$COMPILATION
 WORKDIR /app
@@ -37,7 +37,7 @@ WORKDIR /app
 COPY --from=builder /app ./
 ENTRYPOINT ["/app/app-backend"]
 
-FROM alpine:$ALPINE_VERSION AS backend-alpine
+FROM alpine:$ALPINE_TAG AS backend-alpine
 WORKDIR /app
 COPY --from=builder /app ./
 ENTRYPOINT ["/app/app-backend"]

@@ -9,7 +9,7 @@ services:
       - lnd2_data:/app/nodes-storage/.lnd2
 
   frontend1:
-    image: LMare/lightning-playground-frontend:dev
+    image: LMare/lightning-playground-frontend:${APP_VERSION}
     hostname: frontend1
     ports:
       - "${FRONTEND_PORT}:${FRONTEND_PORT}"
@@ -34,7 +34,7 @@ services:
       - ./btcd.conf:/root/.btcd/btcd.conf   # To simplify the cmd btcctl
 
   lnd1:
-    image: lightninglabs/lnd:${LND_VERSION}
+    image: lightninglabs/lnd:${LND_TAG}
     hostname: lnd1
     depends_on:
       - btcd
@@ -58,7 +58,7 @@ services:
       - btcd_data:/root/.btcd       # pour avoir le certificat de btcd
 
   lnd2:
-    image: lightninglabs/lnd:${LND_VERSION}
+    image: lightninglabs/lnd:${LND_TAG}
     hostname: lnd2
     depends_on:
       - btcd
@@ -82,7 +82,7 @@ services:
       - btcd_data:/root/.btcd
 
   lndtower:
-    image: lightninglabs/lnd:${LND_VERSION}
+    image: lightninglabs/lnd:${LND_TAG}
     hostname: lndtower
     command:
       - lnd
