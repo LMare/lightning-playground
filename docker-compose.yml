@@ -1,30 +1,21 @@
-version: '3.3'
+
 
 services:
   backend1:
-    build:
-      context: .
-      dockerfile: ./backend/Dockerfile
-    image: LMare/lightning-playground-backend:dev
+    image: LMare/lightning-playground-backend:${APP_VERSION}
     hostname: backend1
     volumes:
       - lnd1_data:/app/nodes-storage/.lnd1
       - lnd2_data:/app/nodes-storage/.lnd2
 
   frontend1:
-    build:
-      context: .
-      dockerfile: ./frontend/Dockerfile
     image: LMare/lightning-playground-frontend:dev
     hostname: frontend1
     ports:
       - "${FRONTEND_PORT}:${FRONTEND_PORT}"
 
   btcd:
-    build:
-      context: https://github.com/btcsuite/btcd.git#v0.25.0
-      dockerfile: Dockerfile
-    image: btcsuite/btcd:v0.25.0
+    image: btcsuite/btcd:${BTCD_VERSION}
     hostname: btcd
     command:
       - btcd
@@ -40,10 +31,10 @@ services:
       - --miningaddr=rneZnvYmrLg9V6seGghNXmdfzatNsHgb54
     volumes:
       - btcd_data:/root/.btcd
-      - ./btcd.conf:/root/.btcd/btcd.conf   # To simplify the cmd btcctl 
+      - ./btcd.conf:/root/.btcd/btcd.conf   # To simplify the cmd btcctl
 
   lnd1:
-    image: lightninglabs/lnd:v0.19.3-beta.rc2
+    image: lightninglabs/lnd:${LND_VERSION}
     hostname: lnd1
     depends_on:
       - btcd
@@ -67,7 +58,7 @@ services:
       - btcd_data:/root/.btcd       # pour avoir le certificat de btcd
 
   lnd2:
-    image: lightninglabs/lnd:v0.19.3-beta.rc2
+    image: lightninglabs/lnd:${LND_VERSION}
     hostname: lnd2
     depends_on:
       - btcd
@@ -91,7 +82,7 @@ services:
       - btcd_data:/root/.btcd
 
   lndtower:
-    image: lightninglabs/lnd:v0.19.3-beta.rc2
+    image: lightninglabs/lnd:${LND_VERSION}
     hostname: lndtower
     command:
       - lnd

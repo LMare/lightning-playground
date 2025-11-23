@@ -1,25 +1,43 @@
 ### Utiliser comme ceci pour générer l'image
 ### docker build -t lightning-playground-backend:latest -f backend/Dockerfile .
 
-# 1. Build de l'application backend
-FROM golang:1.25.4-alpine3.22 as Compiler
+ARG ALPINE_VERSION=3.22
+ARG GO_VERSION=1.0.0
+
+# 1. Source Go l'application backend
+FROM golang:$GO_VERSION AS compiler
+ARG COMPILATION=static
+ENV COMPILATION=$COMPILATION
 WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod download
 COPY *.go ./
 COPY cmd/backend cmd/backend/
 COPY backend backend/
-RUN CGO_ENABLED=0 go build -o app-backend ./cmd/backend
+# compilation statique / dynamique (dépendances des libs C)
+RUN if [ "$COMPILATION" = "static" ]; then \
+		echo "CGO_ENABLED=0 go build -o app-backend ./cmd/backend"; \
+		CGO_ENABLED=0 go build -o app-backend ./cmd/backend; \
+	else \
+		echo "go build -o app-backend ./cmd/backend"; \
+		go build -o app-backend ./cmd/backend; \
+	fi
 
 # 2. Construction du dossier /app avec le binaire + ressources
-FROM scratch as Builder
+FROM scratch AS builder
 WORKDIR /app
-COPY --from=Compiler /app/app-backend ./
+COPY --from=compiler /app/app-backend ./
 COPY .env nodes.yaml ./
 COPY backend/templates ./backend/templates/
 
-# 3. Construction de l'image finale
-FROM scratch
+# 3. Construction de l'image finale (alpine ou scratch)
+
+FROM scratch AS backend-scratch
 WORKDIR /app
-COPY --from=Builder /app ./
+COPY --from=builder /app ./
+ENTRYPOINT ["/app/app-backend"]
+
+FROM alpine:$ALPINE_VERSION AS backend-alpine
+WORKDIR /app
+COPY --from=builder /app ./
 ENTRYPOINT ["/app/app-backend"]

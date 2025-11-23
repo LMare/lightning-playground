@@ -22,9 +22,9 @@ Be able to do a little web application to interract with and a lightning serveur
 
 ## Lauch the app
 ```bash
-docker-compose up -d
+docker compose up -d
 # or for development
-docker-compose up -d --build frontend1 backend1
+docker compose up -d --build frontend1 backend1
 ```
 Go to : http://localhost:3000/
 
@@ -42,7 +42,7 @@ docker exec -it lightning-playground_lnd1_1 lncli --network=simnet newaddress np
 Copy the address then replace the value of `miningaddr` in the service `btcd` of `docker-compose.yml`.
 And reload the containers
 ```bash
-docker-compose up -d
+docker compose up -d
 ```
 
 Mine enough block to activate taproot
@@ -78,7 +78,7 @@ Steps :
 docker exec -it lightning-playground_btcd_1 btcctl --simnet generate 10
 ```
   3. Generate an invoice
-  4. Import the invoice on another node and pay-it 
+  4. Import the invoice on another node and pay-it
 
 
 
