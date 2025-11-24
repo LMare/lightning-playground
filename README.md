@@ -1,6 +1,10 @@
 
 # Lightning Playground
 
+
+[![CI](https://github.com/LMare/lightning-playground/actions/workflows/ci.yml/badge.svg)](https://github.com/LMare/lightning-playground/actions/workflows/ci.yml)
+
+
 Personnal projet to discover and improve skill on  :
   - Golang
   - gRPC
@@ -11,13 +15,15 @@ Personnal projet to discover and improve skill on  :
   - docker compose
   - docker bake
   - TU in Go
+  - CI
 
 TODO :
-  - CI/CD
+  - CD
   - extend gRPC API
   - kubernetes
   - infra as code (Terraform + Kind)
-  - do module with Go
+  - modules with Go
+  - more TU/TI
 
 ## Prupose
 Be able to do a little web application to interract with and a lightning serveur running on simnet
