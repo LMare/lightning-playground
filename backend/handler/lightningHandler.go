@@ -78,10 +78,13 @@ func truncateUri(s string, n int) string {
 
 // reduce a string
 func truncate(s string, n int) string {
-    start := s[:n]
 	at := len(s)
+	if at <= 2*n {
+		return s
+	}
+	start := s[:n]
 	end := s[at-n : at]
-    return start + "..." + end
+	return start + "..." + end
 }
 
 
@@ -282,7 +285,7 @@ func handleMakePaiment(response http.ResponseWriter, request *http.Request) {
 	}
 
 }
- 
+
 
 
 // Update name of the node & color

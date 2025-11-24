@@ -47,3 +47,10 @@ docker exec -it btcd btcctl --simnet generate 1500
 
 # purge docker
 docker image prune -f && docker builder prune
+
+
+# Run TU
+go test ./backend/... -v
+# cover of TU + rapport
+go test -coverprofile=cover.out ./backend/handler/
+go tool cover -html=cover.out
