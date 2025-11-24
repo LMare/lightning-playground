@@ -72,6 +72,10 @@ docker-compose down
 ```
 
 ## Using the application
+
+![Lightning-Playground](https://github.com/LMare/lightning-playground/blob/master/Lightning-Playground.png)
+
+
 Steps :
  1. Add new pair with the URI of other nodes
  2. Create channels between pairs.
