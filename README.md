@@ -10,11 +10,11 @@ Personnal projet to discover and improve skill on  :
   - dockerfile
   - docker compose
   - docker bake
+  - TU in Go
 
 TODO :
-  - TU in Go
-  - extend gRPC API
   - CI/CD
+  - extend gRPC API
   - kubernetes
   - infra as code (Terraform + Kind)
   - do module with Go

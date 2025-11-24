@@ -1,0 +1,29 @@
+name: Go CI
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Récupérer le code
+      uses: actions/checkout@v4
+
+    - name: Installer Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.22'
+
+    - name: Vérifier la compilation
+      run: go build ./...
+
+    - name: Lancer les tests
+      run: go test -v ./...
+
+    - name: Couverture des tests
+      run: go test -coverprofile=cover.out ./... && go tool cover -func=cover.out
