@@ -3,7 +3,8 @@
 
 
 [![CI](https://github.com/LMare/lightning-playground/actions/workflows/ci.yml/badge.svg)](https://github.com/LMare/lightning-playground/actions/workflows/ci.yml)
-[![Coverage Status](https://coveralls.io/repos/github/LMare/lightning-playground/badge.svg?branch=master)](https://coveralls.io/github/LMare/lightning-playground?branch=master)
+[![codecov](https://codecov.io/gh/LMare/lightning-playground/branch/master/graph/badge.svg)](https://codecov.io/gh/LMare/lightning-playground)
+
 
 
 Personnal projet to discover and improve skill on  :
