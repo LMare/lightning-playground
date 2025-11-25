@@ -26,9 +26,12 @@ jobs:
       run: go test -v ./...
 
     - name: Couverture des tests
-      run: go test -coverprofile=cover.out ./... && go tool cover -func=cover.out | grep -v "pb.go"
+      run: |
+        go test -coverprofile=cover.out ./...
+        # on filtre les fichiers générés *.pb.go
+        grep -v "pb.go" cover.out > cover.filtered.out
 
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v4
       with:
-          file: cover.out
+          file: cover.filtered.out
