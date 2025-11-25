@@ -14,11 +14,17 @@ func main() {
 	startServer()
 }
 
-func startServer() {
-	cfg := config.Load()
-	router := handler.GetRouter()
-	exception.ConfigureProjectBasePath(cfg.ProjectPath)
+//Set the conf of the serveur
+func setupServer() (*config.Config, http.Handler) {
+    cfg := config.Load()
+    router := handler.GetRouter()
+    exception.ConfigureProjectBasePath(cfg.ProjectPath)
+    return cfg, router
+}
 
-	fmt.Printf("Server Backend started : %s:%s\n", cfg.BackendUrl, cfg.BackendPort)
-	log.Fatal(http.ListenAndServe(":"+cfg.BackendPort, router))
+// startServer launch the server HTTP
+func startServer() {
+    cfg, router := setupServer()
+    fmt.Printf("Server Backend started : %s:%s\n", cfg.BackendUrl, cfg.BackendPort)
+    log.Fatal(http.ListenAndServe(":"+cfg.BackendPort, router))
 }

@@ -25,7 +25,7 @@ TODO :
   - kubernetes
   - infra as code (Terraform + Kind)
   - modules with Go
-  - more TU/TI
+  - increase the cover TU/TI
 
 ## Prupose
 Be able to do a little web application to interract with and a lightning serveur running on simnet
