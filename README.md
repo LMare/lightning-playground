@@ -16,7 +16,6 @@ Personnal projet to discover and improve skill on  :
   - dockerfile
   - docker compose
   - docker bake
-  - TU in Go
   - CI
 
 TODO :
@@ -41,13 +40,13 @@ Go to : http://localhost:3000/
 ### First launch
 To use the lnd fonctionalities, you will need at least 2 lnd nodes with a wallet :
 ```bash
-docker exec -it lightning-playground_lnd1_1 lncli --network=simnet create
-docker exec -it lightning-playground_lnd2_1 lncli --network=simnet create
+docker exec -it lightning-playground-lnd1-1 lncli --network=simnet create
+docker exec -it lightning-playground-lnd2-1 lncli --network=simnet create
 ```
 
 To mine with one of these address do :
 ```bash
-docker exec -it lightning-playground_lnd1_1 lncli --network=simnet newaddress np2wkh
+docker exec -it lightning-playground-lnd1-1 lncli --network=simnet newaddress np2wkh
 ```
 Copy the address then replace the value of `miningaddr` in the service `btcd` of `docker-compose.yml`.
 And reload the containers
@@ -57,20 +56,20 @@ docker compose up -d
 
 Mine enough block to activate taproot
 ```bash
-docker exec -it lightning-playground_btcd_1 btcctl --simnet generate 1500
+docker exec -it lightning-playground-btcd-1 btcctl --simnet generate 1500
 ```
 
 ### Unlock the wallet
 After each up of the lnd containers, the wallet must be unlock
 ```bash
-docker exec -it lightning-playground_lnd1_1 lncli --network=simnet unlock
-docker exec -it lightning-playground_lnd2_1 lncli --network=simnet unlock
+docker exec -it lightning-playground-lnd1-1 lncli --network=simnet unlock
+docker exec -it lightning-playground-lnd2-1 lncli --network=simnet unlock
 ```
 
 ### Generate a new block
 In the simnet network the news blocks must to be mine manually. Run this cmd (every 10 minutes) to keep the lnd node synchronised with the btcd node    
 ```bash
-docker exec -it lightning-playground_btcd_1 btcctl --simnet generate 1
+docker exec -it lightning-playground-btcd-1 btcctl --simnet generate 1
 ```
 
 
@@ -89,7 +88,7 @@ Steps :
  2. Create channels between pairs.
     After creating the channel to pass it in `active` state, generate some blocs with :
 ```bash
-docker exec -it lightning-playground_btcd_1 btcctl --simnet generate 10
+docker exec -it lightning-playground-btcd-1 btcctl --simnet generate 10
 ```
   3. Generate an invoice
   4. Import the invoice on another node and pay-it
