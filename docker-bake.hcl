@@ -1,5 +1,5 @@
 variable "APP_VERSION" {
-  default = "v0.1.1"
+  default = "v0.1.2-SNAPSHOT"
 }
 variable "BTCD_VERSION" {
   default = "v0.25.0"
