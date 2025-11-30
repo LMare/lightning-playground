@@ -9,7 +9,7 @@
 
 Personnal projet to discover and improve skill on  :
   - Golang
-  - gRPC
+  - gRPC (use & extend gRPC API)
   - Lnd
   - HTMX
   - SSE
@@ -19,12 +19,9 @@ Personnal projet to discover and improve skill on  :
   - CI
 
 TODO :
-  - CD
-  - extend gRPC API
-  - kubernetes
-  - infra as code (Terraform + Kind)
+  - CD / infra as code (Terraform + kubernetes with Kind)
   - modules with Go
-  - increase the cover TU/TI
+  - increase the test cover by implementing TI
 
 ## Prupose
 Be able to do a little web application to interract with and a lightning serveur running on simnet
@@ -95,6 +92,6 @@ docker exec -it lightning-playground-btcd-1 btcctl --simnet generate 10
 
 
 
-## TODO List of Ideas :
-  - update the label and the color of a node (http://github.com/LMare/lightning-playground/issues/1):
-    * Need to update the code of lnd to expose a gRPC method to do that
+## Note :
+The app works with a LND customised [LMare/lnd](https://github.com/LMare/lnd/tree/feature/gRPC-alias-color).
+This version allow to modify the alias and the color of the node LND by gRPC call.

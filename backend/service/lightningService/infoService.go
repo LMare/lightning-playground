@@ -118,7 +118,7 @@ func GetUsefullInfo(dataClient nodeModel.LndClientAuthData) (*InfoLndNode, error
 }
 
 
-// TODO:
+// change the color and the alias of the node
 func UpdateAliasAndColor(dataClient nodeModel.LndClientAuthData, alias string, color string) error {
 	client, conn, err := getLightningClient(dataClient)
 	if err != nil {
@@ -127,9 +127,19 @@ func UpdateAliasAndColor(dataClient nodeModel.LndClientAuthData, alias string, c
     }
     defer conn.Close()
 
-	// Todo : No Interface gRPC to do that :/
-	_ = client
+	// Alias call
+	_, err = client.SetAlias(context.Background(), &lnrpc.SetAliasRequest{Alias: alias,})
+	if err != nil {
+		err := exception.NewError("cannot change the alias", err, exception.NewExampleError)
+		return err
+    }
 
-	return exception.NewError("Not Implemended", err, exception.NewExampleError)
+	// Color call
+	_, err = client.SetColor(context.Background(), &lnrpc.SetColorRequest{Color: color,})
+	if err != nil {
+		err := exception.NewError("cannot change the color", err, exception.NewExampleError)
+		return err
+	}
 
+	return nil
 }

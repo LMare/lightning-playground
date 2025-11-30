@@ -1,8 +1,12 @@
 variable "APP_VERSION" {
-  default = "v0.2.0-SNAPSHOT"
+  default = "v0.1.1-SNAPSHOT"
 }
 variable "BTCD_VERSION" {
   default = "v0.25.0"
+}
+
+variable "LND_TAG" {
+  default = "v0.20.0-beta-custom"
 }
 
 variable "ALPINE_TAG" {
@@ -32,7 +36,7 @@ group "frontend" {
 	targets = ["frontend-alpine", "frontend-scratch"]
 }
 group "default" {
-	targets = ["frontend", "backend", "btcd"]
+	targets = ["frontend", "backend", "btcd", "lnd"]
 }
 
 
@@ -76,4 +80,14 @@ target "btcd" {
   context = "https://github.com/btcsuite/btcd.git#${BTCD_VERSION}"
   dockerfile = "Dockerfile"
   tags = ["btcsuite/btcd:${BTCD_VERSION}"]
+}
+
+target "lnd" {
+  context = "https://github.com/LMare/lnd.git#feature/gRPC-alias-color"
+  dockerfile = "Dockerfile"
+  args = {
+	  checkout = "feature/gRPC-alias-color"
+	  git_url = "https://github.com/LMare/lnd"
+  }
+  tags = ["LMare/lnd:${LND_TAG}"]
 }

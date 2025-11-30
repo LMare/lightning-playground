@@ -248,6 +248,7 @@ func handleCreateInvoice(response http.ResponseWriter, request *http.Request) {
 
 }
 
+// Make the payment
 func handleMakePaiment(response http.ResponseWriter, request *http.Request) {
 	// Parse les données du corps
 	err := request.ParseForm()
@@ -289,7 +290,6 @@ func handleMakePaiment(response http.ResponseWriter, request *http.Request) {
 
 
 // Update name of the node & color
-// TODO : update lnd to have gRPC methode to do that
 func handleUpdateNodeAlias(response http.ResponseWriter, request *http.Request) {
 	// Parse les données du corps
     err := request.ParseForm()
@@ -304,8 +304,16 @@ func handleUpdateNodeAlias(response http.ResponseWriter, request *http.Request) 
 	color := request.FormValue("color")
     fmt.Println("color reçu : ", color)
 
+	// paramètre de la node
+	idStr := request.FormValue("id")
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		fail(response, request, "Pas d'id transmis", err)
+		return
+	}
+
 	// connection info of lnd1
-	authData, err := nodeService.GetLndClientAuthData(1)
+	authData, err := nodeService.GetLndClientAuthData(id)
 	if(err != nil) {
 		fail(response, request, "Info transmisent incorrectes", err)
 		return
