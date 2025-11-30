@@ -86,8 +86,12 @@ const (
 	Lightning_RegisterRPCMiddleware_FullMethodName    = "/lnrpc.Lightning/RegisterRPCMiddleware"
 	Lightning_SendCustomMessage_FullMethodName        = "/lnrpc.Lightning/SendCustomMessage"
 	Lightning_SubscribeCustomMessages_FullMethodName  = "/lnrpc.Lightning/SubscribeCustomMessages"
+	Lightning_SendOnionMessage_FullMethodName         = "/lnrpc.Lightning/SendOnionMessage"
+	Lightning_SubscribeOnionMessages_FullMethodName   = "/lnrpc.Lightning/SubscribeOnionMessages"
 	Lightning_ListAliases_FullMethodName              = "/lnrpc.Lightning/ListAliases"
 	Lightning_LookupHtlcResolution_FullMethodName     = "/lnrpc.Lightning/LookupHtlcResolution"
+	Lightning_SetAlias_FullMethodName                 = "/lnrpc.Lightning/SetAlias"
+	Lightning_SetColor_FullMethodName                 = "/lnrpc.Lightning/SetColor"
 )
 
 // LightningClient is the client API for Lightning service.
@@ -495,6 +499,12 @@ type LightningClient interface {
 	// needs to be compiled with  the `dev` build tag, and the message type to
 	// override should be specified in lnd's experimental protocol configuration.
 	SubscribeCustomMessages(ctx context.Context, in *SubscribeCustomMessagesRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[CustomMessage], error)
+	// lncli: `sendonion`
+	// SendOnionMessage sends an onion message to a peer.
+	SendOnionMessage(ctx context.Context, in *SendOnionMessageRequest, opts ...grpc.CallOption) (*SendOnionMessageResponse, error)
+	// lncli: `subscribeonion`
+	// SubscribeOnionMessages subscribes to a stream of incoming onion messages.
+	SubscribeOnionMessages(ctx context.Context, in *SubscribeOnionMessagesRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[OnionMessage], error)
 	// lncli: `listaliases`
 	// ListAliases returns the set of all aliases that have ever existed with
 	// their confirmed SCID (if it exists) and/or the base SCID (in the case of
@@ -504,6 +514,10 @@ type LightningClient interface {
 	// If the htlc has no final resolution yet, a NotFound grpc status code is
 	// returned.
 	LookupHtlcResolution(ctx context.Context, in *LookupHtlcResolutionRequest, opts ...grpc.CallOption) (*LookupHtlcResolutionResponse, error)
+	// Set the Alias of the node server
+	SetAlias(ctx context.Context, in *SetAliasRequest, opts ...grpc.CallOption) (*SetAliasResponse, error)
+	// Set the Alias of the node server
+	SetColor(ctx context.Context, in *SetColorRequest, opts ...grpc.CallOption) (*SetColorResponse, error)
 }
 
 type lightningClient struct {
@@ -1281,6 +1295,35 @@ func (c *lightningClient) SubscribeCustomMessages(ctx context.Context, in *Subsc
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type Lightning_SubscribeCustomMessagesClient = grpc.ServerStreamingClient[CustomMessage]
 
+func (c *lightningClient) SendOnionMessage(ctx context.Context, in *SendOnionMessageRequest, opts ...grpc.CallOption) (*SendOnionMessageResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SendOnionMessageResponse)
+	err := c.cc.Invoke(ctx, Lightning_SendOnionMessage_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *lightningClient) SubscribeOnionMessages(ctx context.Context, in *SubscribeOnionMessagesRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[OnionMessage], error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	stream, err := c.cc.NewStream(ctx, &Lightning_ServiceDesc.Streams[13], Lightning_SubscribeOnionMessages_FullMethodName, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &grpc.GenericClientStream[SubscribeOnionMessagesRequest, OnionMessage]{ClientStream: stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type Lightning_SubscribeOnionMessagesClient = grpc.ServerStreamingClient[OnionMessage]
+
 func (c *lightningClient) ListAliases(ctx context.Context, in *ListAliasesRequest, opts ...grpc.CallOption) (*ListAliasesResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ListAliasesResponse)
@@ -1295,6 +1338,26 @@ func (c *lightningClient) LookupHtlcResolution(ctx context.Context, in *LookupHt
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(LookupHtlcResolutionResponse)
 	err := c.cc.Invoke(ctx, Lightning_LookupHtlcResolution_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *lightningClient) SetAlias(ctx context.Context, in *SetAliasRequest, opts ...grpc.CallOption) (*SetAliasResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SetAliasResponse)
+	err := c.cc.Invoke(ctx, Lightning_SetAlias_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *lightningClient) SetColor(ctx context.Context, in *SetColorRequest, opts ...grpc.CallOption) (*SetColorResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SetColorResponse)
+	err := c.cc.Invoke(ctx, Lightning_SetColor_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -1706,6 +1769,12 @@ type LightningServer interface {
 	// needs to be compiled with  the `dev` build tag, and the message type to
 	// override should be specified in lnd's experimental protocol configuration.
 	SubscribeCustomMessages(*SubscribeCustomMessagesRequest, grpc.ServerStreamingServer[CustomMessage]) error
+	// lncli: `sendonion`
+	// SendOnionMessage sends an onion message to a peer.
+	SendOnionMessage(context.Context, *SendOnionMessageRequest) (*SendOnionMessageResponse, error)
+	// lncli: `subscribeonion`
+	// SubscribeOnionMessages subscribes to a stream of incoming onion messages.
+	SubscribeOnionMessages(*SubscribeOnionMessagesRequest, grpc.ServerStreamingServer[OnionMessage]) error
 	// lncli: `listaliases`
 	// ListAliases returns the set of all aliases that have ever existed with
 	// their confirmed SCID (if it exists) and/or the base SCID (in the case of
@@ -1715,6 +1784,10 @@ type LightningServer interface {
 	// If the htlc has no final resolution yet, a NotFound grpc status code is
 	// returned.
 	LookupHtlcResolution(context.Context, *LookupHtlcResolutionRequest) (*LookupHtlcResolutionResponse, error)
+	// Set the Alias of the node server
+	SetAlias(context.Context, *SetAliasRequest) (*SetAliasResponse, error)
+	// Set the Alias of the node server
+	SetColor(context.Context, *SetColorRequest) (*SetColorResponse, error)
 	mustEmbedUnimplementedLightningServer()
 }
 
@@ -1926,11 +1999,23 @@ func (UnimplementedLightningServer) SendCustomMessage(context.Context, *SendCust
 func (UnimplementedLightningServer) SubscribeCustomMessages(*SubscribeCustomMessagesRequest, grpc.ServerStreamingServer[CustomMessage]) error {
 	return status.Errorf(codes.Unimplemented, "method SubscribeCustomMessages not implemented")
 }
+func (UnimplementedLightningServer) SendOnionMessage(context.Context, *SendOnionMessageRequest) (*SendOnionMessageResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SendOnionMessage not implemented")
+}
+func (UnimplementedLightningServer) SubscribeOnionMessages(*SubscribeOnionMessagesRequest, grpc.ServerStreamingServer[OnionMessage]) error {
+	return status.Errorf(codes.Unimplemented, "method SubscribeOnionMessages not implemented")
+}
 func (UnimplementedLightningServer) ListAliases(context.Context, *ListAliasesRequest) (*ListAliasesResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListAliases not implemented")
 }
 func (UnimplementedLightningServer) LookupHtlcResolution(context.Context, *LookupHtlcResolutionRequest) (*LookupHtlcResolutionResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method LookupHtlcResolution not implemented")
+}
+func (UnimplementedLightningServer) SetAlias(context.Context, *SetAliasRequest) (*SetAliasResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SetAlias not implemented")
+}
+func (UnimplementedLightningServer) SetColor(context.Context, *SetColorRequest) (*SetColorResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SetColor not implemented")
 }
 func (UnimplementedLightningServer) mustEmbedUnimplementedLightningServer() {}
 func (UnimplementedLightningServer) testEmbeddedByValue()                   {}
@@ -3052,6 +3137,35 @@ func _Lightning_SubscribeCustomMessages_Handler(srv interface{}, stream grpc.Ser
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type Lightning_SubscribeCustomMessagesServer = grpc.ServerStreamingServer[CustomMessage]
 
+func _Lightning_SendOnionMessage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SendOnionMessageRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(LightningServer).SendOnionMessage(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Lightning_SendOnionMessage_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(LightningServer).SendOnionMessage(ctx, req.(*SendOnionMessageRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Lightning_SubscribeOnionMessages_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(SubscribeOnionMessagesRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(LightningServer).SubscribeOnionMessages(m, &grpc.GenericServerStream[SubscribeOnionMessagesRequest, OnionMessage]{ServerStream: stream})
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type Lightning_SubscribeOnionMessagesServer = grpc.ServerStreamingServer[OnionMessage]
+
 func _Lightning_ListAliases_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ListAliasesRequest)
 	if err := dec(in); err != nil {
@@ -3084,6 +3198,42 @@ func _Lightning_LookupHtlcResolution_Handler(srv interface{}, ctx context.Contex
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(LightningServer).LookupHtlcResolution(ctx, req.(*LookupHtlcResolutionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Lightning_SetAlias_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetAliasRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(LightningServer).SetAlias(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Lightning_SetAlias_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(LightningServer).SetAlias(ctx, req.(*SetAliasRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Lightning_SetColor_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetColorRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(LightningServer).SetColor(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Lightning_SetColor_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(LightningServer).SetColor(ctx, req.(*SetColorRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -3312,12 +3462,24 @@ var Lightning_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Lightning_SendCustomMessage_Handler,
 		},
 		{
+			MethodName: "SendOnionMessage",
+			Handler:    _Lightning_SendOnionMessage_Handler,
+		},
+		{
 			MethodName: "ListAliases",
 			Handler:    _Lightning_ListAliases_Handler,
 		},
 		{
 			MethodName: "LookupHtlcResolution",
 			Handler:    _Lightning_LookupHtlcResolution_Handler,
+		},
+		{
+			MethodName: "SetAlias",
+			Handler:    _Lightning_SetAlias_Handler,
+		},
+		{
+			MethodName: "SetColor",
+			Handler:    _Lightning_SetColor_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{
@@ -3388,6 +3550,11 @@ var Lightning_ServiceDesc = grpc.ServiceDesc{
 		{
 			StreamName:    "SubscribeCustomMessages",
 			Handler:       _Lightning_SubscribeCustomMessages_Handler,
+			ServerStreams: true,
+		},
+		{
+			StreamName:    "SubscribeOnionMessages",
+			Handler:       _Lightning_SubscribeOnionMessages_Handler,
 			ServerStreams: true,
 		},
 	},
