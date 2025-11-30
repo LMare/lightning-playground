@@ -12,11 +12,17 @@
 				<tbody
 					id="table-nodes-body"
 					class="cursor-pointer"
+					data-selected=""
 					hx-get="/api/lightning/nodes"
-					hx-trigger="load"
+					hx-trigger="load, alias-updated from:body"
 					hx-target="this"
 					hx-swap="innerHTML"
-					hx-on="htmx:afterSwap: enrichRgaaTableRows(this, ['id', 'alias'])">
+					hx-on='htmx:afterSwap:
+						enrichRgaaTableRows(this, ["id", "alias"]);
+						if (this.dataset.selected) {
+							const row = document.querySelector("#table-nodes-body tr[data-id=\"" + this.dataset.selected + "\"]");
+							if (row) row.click();
+					   }'>
 
 					<tr>
 						<td colspan="2">Chargement en cours...</td>
@@ -47,7 +53,19 @@
 					<button onclick="enableEdit()" class="text-sm" aria-label="Edit" title="edit">✏️</button>
 				</p>
 
-				<form hx-put="/api/lightning/nodeInfo" id="edit-form" hx-swap="none" style="display: none;align-items: center;">
+				<form
+					id="edit-form"
+					hx-put="/api/lightning/alias"
+					hx-vals=""
+					hx-swap="none"
+					hx-on="htmx:afterRequest:
+						document.body.dispatchEvent(
+							new CustomEvent('alias-updated', { detail: { id: event.detail.requestConfig.parameters.id } })
+						);
+						cancelEdit();"
+					class="node-event"
+					style="display: none;align-items: center;">
+
 					<input type="text" name="alias" id="alias-input" class="border w-[24ch] px-2 py-1 rounded" />
 					<input type="color" name="color" id="color-input" class="ml-2 w-6" />
 					<button type="submit" class="ml-2 text-sm" aria-label="Save" title="Save">💾</button>
@@ -200,6 +218,9 @@
 			document.querySelectorAll(".node-event-container").forEach(el => {
 				el.style.display = "block";
 			});
+
+			// save the line selected
+			tr.closest("tbody").dataset.selected = tr.dataset.id;
 
 			// trigger the loading of informations
 			const nodeDataDiv = document.querySelectorAll(".node-event").forEach(el => {
