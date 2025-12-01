@@ -18,8 +18,8 @@ Personnal projet to discover and improve skill on  :
   - docker bake
   - CI
 
-TODO :
-  - CD / infra as code (Terraform + kubernetes with Kind)
+**TODO** :
+  - CD / infra as code (Terraform + kubernetes with Kind) -> Working in progress [feature/kubernetes](https://github.com/LMare/lightning-playground/tree/feature/kubernetes)
   - modules with Go
   - increase the test cover by implementing TI
 
