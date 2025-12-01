@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    kompose.cmd: kompose convert -f docker-compose.yml
+    kompose.version: 1.37.0 (fb0539e64)
+  labels:
+    io.kompose.service: backend1
+  name: backend1
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      io.kompose.service: backend1
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      annotations:
+        kompose.cmd: kompose convert -f docker-compose.yml
+        kompose.version: 1.37.0 (fb0539e64)
+      labels:
+        io.kompose.service: backend1
+    spec:
+      containers:
+        - image: LMare/lightning-playground-backend:v0.1.2-SNAPSHOT
+          name: backend1
+          volumeMounts:
+            - mountPath: /app/nodes-storage/.lnd1
+              name: lnd1-data
+            - mountPath: /app/nodes-storage/.lnd2
+              name: lnd2-data
+      hostname: backend1
+      restartPolicy: Always
+      volumes:
+        - name: lnd1-data
+          persistentVolumeClaim:
+            claimName: lnd1-data
+        - name: lnd2-data
+          persistentVolumeClaim:
+            claimName: lnd2-data

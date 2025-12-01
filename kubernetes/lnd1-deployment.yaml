@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    kompose.cmd: kompose convert -f docker-compose.yml
+    kompose.version: 1.37.0 (fb0539e64)
+  labels:
+    io.kompose.service: lnd1
+  name: lnd1
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      io.kompose.service: lnd1
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      annotations:
+        kompose.cmd: kompose convert -f docker-compose.yml
+        kompose.version: 1.37.0 (fb0539e64)
+      labels:
+        io.kompose.service: lnd1
+    spec:
+      containers:
+        - args:
+            - lnd
+            - --btcd.rpchost=btcd:18556
+            - --bitcoin.active
+            - --bitcoin.simnet
+            - --bitcoin.node=btcd
+            - --btcd.rpcuser=user
+            - --btcd.rpcpass=pass
+            - --listen=0.0.0.0:9735
+            - --debuglevel=trace
+            - --watchtower.active
+            - --watchtower.externalip=lndtower:9911
+            - --rpclisten=0.0.0.0:10009
+            - --externalip=lnd1:9735
+            - --tlsextradomain=lnd1
+          image: LMare/lnd:v0.20.0-beta-custom
+          name: lnd1
+          volumeMounts:
+            - mountPath: /root/.lnd
+              name: lnd1-data
+            - mountPath: /root/.btcd
+              name: btcd-data
+      hostname: lnd1
+      restartPolicy: Always
+      volumes:
+        - name: lnd1-data
+          persistentVolumeClaim:
+            claimName: lnd1-data
+        - name: btcd-data
+          persistentVolumeClaim:
+            claimName: btcd-data

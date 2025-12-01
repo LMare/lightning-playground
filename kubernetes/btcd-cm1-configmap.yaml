@@ -1,0 +1,16 @@
+apiVersion: v1
+data:
+  btcd.conf: |+
+    rpcuser=user
+    rpcpass=pass
+    rpcserver=localhost:18556
+    rpccert=/root/.btcd/rpc.cert
+    simnet=1
+
+kind: ConfigMap
+metadata:
+  annotations:
+    use-subpath: "true"
+  labels:
+    io.kompose.service: btcd
+  name: btcd-cm1

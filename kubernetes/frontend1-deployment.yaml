@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    kompose.cmd: kompose convert -f docker-compose.yml
+    kompose.version: 1.37.0 (fb0539e64)
+  labels:
+    io.kompose.service: frontend1
+  name: frontend1
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      io.kompose.service: frontend1
+  template:
+    metadata:
+      annotations:
+        kompose.cmd: kompose convert -f docker-compose.yml
+        kompose.version: 1.37.0 (fb0539e64)
+      labels:
+        io.kompose.service: frontend1
+    spec:
+      containers:
+        - image: LMare/lightning-playground-frontend:v0.1.2-SNAPSHOT
+          name: frontend1
+          ports:
+            - containerPort: 3000
+              protocol: TCP
+      hostname: frontend1
+      restartPolicy: Always
