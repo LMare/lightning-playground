@@ -23,6 +23,73 @@ TODO :
   - modules with Go
   - increase the test cover by implementing TI
 
+---------------------------------------------------------------------------------------------
+
+## TODO List for Kubernetes Migration (Lightning Network Project)
+
+(generated after a brainstorming with Copilot)
+
+### 1. Cluster Setup
+- [X] Spin up a local Kubernetes cluster (Kind, Minikube, or k3s).
+- [ ] Configure `kubectl` and create a dedicated namespace (e.g. `lightning`).
+
+### 2. Core Components
+- [ ] **Frontend:** Deployment + Service + Ingress (stateless, scalable).
+- [ ] **Backend:** Deployment + Service (stateless, responsible for discovering LND pods and unlocking/creating wallets).
+- [ ] **btcd:** StatefulSet + PVC + Service (Bitcoin full node).
+- [ ] **LND:** StatefulSet + PVC + headless Service (multiple replicas, each with its own wallet/certs).
+
+### 3. Data & Secrets Management
+- [ ] Define **PersistentVolumeClaims** for each LND and btcd.
+- [ ] Create a **Secret bundle** (`lnd-credentials`) to store certs/macaroons for all LND pods.
+- [ ] Implement a **job or init process** that copies certs/macaroons from LND PVCs into the Secret bundle.
+- [ ] Mount the Secret in the backend in read-only mode.
+
+### 4. Backend Responsibilities
+- [ ] Discover LND pods via the headless service (`lnd-0.lnd-headless`, etc.).
+- [ ] Read the corresponding certs/macaroons from the Secret bundle.
+- [ ] Use gRPC to **create or unlock wallets** via the `WalletUnlocker` service.
+- [ ] Replace static `nodes.yaml` with dynamic discovery logic.
+
+### 5. Networking & Service Discovery
+- [ ] Configure a **headless Service** for LND to provide stable DNS per pod.
+- [ ] Ensure the backend can dynamically map endpoints (`lnd-N`) to certs/macaroons.
+- [ ] Use Ingress to expose frontend/backend APIs externally.
+
+### 6. Security & Best Practices
+- [ ] Restrict RBAC permissions for the job that updates the Secret bundle.
+- [ ] Mount Secrets as read-only in backend pods.
+- [ ] Separate configs: ConfigMaps for non-sensitive data, Secrets for sensitive data.
+- [ ] Add liveness/readiness probes for backend and LND.
+
+### 7. Scalability & Monitoring
+- [ ] Test scaling: `kubectl scale statefulset lnd --replicas=5`
+- [ ] Verify the backend adapts automatically to new pods.
+- [ ] Add monitoring (Prometheus + Grafana) and centralized logging.
+- [ ] Define NetworkPolicies to restrict communication paths (backend ↔ LND ↔ btcd).
+
+### 8. Finalization
+- [ ] Organize manifests into folders (`frontend/`, `backend/`, `lnd/`, `btcd/`).
+- [ ] Deploy everything with `kubectl apply -f ./manifests`.
+- [ ] Validate end-to-end flow: frontend → backend → LND → btcd.
+- [ ] Document the workflow for reproducibility (CI/CD, Helm charts, etc.).
+
+---
+
+## ✅ Expected Result
+
+- Scaling LND pods is done with a single command (`kubectl scale`).
+- Each LND pod has its own wallet and certs, stored securely in PVCs and synced into a Secret bundle.
+- The backend dynamically discovers LND pods via DNS and uses the correct certs/macaroons from the Secret bundle.
+- Wallet creation/unlock is handled by the backend via gRPC (`WalletUnlocker` service).
+- Frontend and backend are exposed externally via Ingress.
+- Secrets are mounted read-only, RBAC is restricted, and configs are separated (ConfigMap vs Secret).
+- Monitoring, probes, and NetworkPolicies ensure production-grade reliability and observability.
+- The architecture is clean, Kubernetes-native, and ready to evolve toward production.
+
+
+-----------------------------------------------------------------------------------------------
+
 ## Prupose
 Be able to do a little web application to interract with and a lightning serveur running on simnet
 
