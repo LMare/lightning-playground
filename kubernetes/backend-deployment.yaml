@@ -1,37 +1,35 @@
+# Deployement of pod backend in stateless
 apiVersion: apps/v1
-kind: Deployment
+kind: Deployment  # -> des pods stateless, on scale facilement
 metadata:
   annotations:
-    kompose.cmd: kompose convert -f docker-compose.yml
-    kompose.version: 1.37.0 (fb0539e64)
+    version : 0.2.0-SNAPSHOT
+    devBy : LMare
   labels:
-    io.kompose.service: backend1
-  name: backend1
+    app: backend
+  name: backend
+  namespace : lightning-playground
 spec:
-  replicas: 1
+  replicas: 2
   selector:
     matchLabels:
-      io.kompose.service: backend1
-  strategy:
-    type: Recreate
+      app: backend
   template:
     metadata:
-      annotations:
-        kompose.cmd: kompose convert -f docker-compose.yml
-        kompose.version: 1.37.0 (fb0539e64)
       labels:
-        io.kompose.service: backend1
+        app: backend
     spec:
       containers:
-        - image: LMare/lightning-playground-backend:v0.1.2-SNAPSHOT
-          name: backend1
+        - image: LMare/lightning-playground-backend:v0.2.0-SNAPSHOT
+          name: backend
+          # TODO to delete to manage N lnd without modify config
           volumeMounts:
             - mountPath: /app/nodes-storage/.lnd1
               name: lnd1-data
             - mountPath: /app/nodes-storage/.lnd2
               name: lnd2-data
-      hostname: backend1
       restartPolicy: Always
+      # TODO to delete to manage N lnd without modify config
       volumes:
         - name: lnd1-data
           persistentVolumeClaim:
