@@ -1,0 +1,14 @@
+# Ingress :
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-loadbalancer
+  namespace: lightning-playground
+spec:
+  type: ClusterIP
+  selector:
+      app: frontend
+  ports:
+    - name: frontend-entrypoint
+      port: 80
+      targetPort: frontend-port

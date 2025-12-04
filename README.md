@@ -34,8 +34,8 @@ TODO :
 - [ ] Configure `kubectl` and create a dedicated namespace (e.g. `lightning`).
 
 ### 2. Core Components
-- [ ] **Frontend:** Deployment + Service + Ingress (stateless, scalable).
-- [ ] **Backend:** Deployment + Service (stateless, responsible for discovering LND pods and unlocking/creating wallets).
+- [X] **Frontend:** Deployment + Service + Ingress (stateless, scalable).
+- [X] **Backend:** Deployment + Service (stateless, responsible for discovering LND pods and unlocking/creating wallets).
 - [ ] **btcd:** StatefulSet + PVC + Service (Bitcoin full node).
 - [ ] **LND:** StatefulSet + PVC + headless Service (multiple replicas, each with its own wallet/certs).
 

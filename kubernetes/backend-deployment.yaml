@@ -4,7 +4,7 @@ kind: Deployment  # -> des pods stateless, on scale facilement
 metadata:
   annotations:
     version : 0.2.0-SNAPSHOT
-    devBy : LMare
+    author : LMare
   labels:
     app: backend
   name: backend
@@ -28,6 +28,9 @@ spec:
               name: lnd1-data
             - mountPath: /app/nodes-storage/.lnd2
               name: lnd2-data
+          ports:
+            - name: backend-port
+              containerPort: 8080
       restartPolicy: Always
       # TODO to delete to manage N lnd without modify config
       volumes:
