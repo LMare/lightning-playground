@@ -4,6 +4,8 @@ kind: Ingress
 metadata:
   name: frontend-ingress
   namespace: lightning-playground
+  labels:
+      app: frontend
 spec:
   rules:
   - host: lightning-playground.local

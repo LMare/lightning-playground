@@ -4,6 +4,8 @@ kind: Service
 metadata:
   name: frontend-loadbalancer
   namespace: lightning-playground
+  labels:
+      app: frontend
 spec:
   type: ClusterIP
   selector:

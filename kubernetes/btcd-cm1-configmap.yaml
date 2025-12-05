@@ -12,5 +12,6 @@ metadata:
   annotations:
     use-subpath: "true"
   labels:
-    io.kompose.service: btcd
+    app: btcd
   name: btcd-cm1
+  namespace: lightning-playground
