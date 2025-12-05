@@ -1,26 +1,24 @@
+# StatefulSet pod for btcd
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
   annotations:
     kompose.cmd: kompose convert -f docker-compose.yml
     kompose.version: 1.37.0 (fb0539e64)
   labels:
-    io.kompose.service: btcd
+    app: btcd
   name: btcd
+  namespace : lightning-playground
 spec:
+  serviceName: btcd-headless  # pour servir l'url unique de chaque pod
   replicas: 1
   selector:
     matchLabels:
-      io.kompose.service: btcd
-  strategy:
-    type: Recreate
+      app: btcd
   template:
     metadata:
-      annotations:
-        kompose.cmd: kompose convert -f docker-compose.yml
-        kompose.version: 1.37.0 (fb0539e64)
       labels:
-        io.kompose.service: btcd
+        app: btcd
     spec:
       containers:
         - args:
@@ -41,15 +39,17 @@ spec:
             - mountPath: /root/.btcd/btcd.conf
               name: btcd-cm1
               subPath: btcd.conf
-      hostname: btcd
+          ports:
+            - name: grpc-port
+              containerPort: 18556
+            - name: p2p-port
+              containerPort: 18555
       restartPolicy: Always
-      volumes:
-        - name: btcd-data
-          persistentVolumeClaim:
-            claimName: btcd-data
-        - configMap:
-            items:
-              - key: btcd.conf
-                path: btcd.conf
-            name: btcd-cm1
-          name: btcd-cm1
+    volumeClaimTemplates:
+      metadata:
+        name: btcd-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 50Mi # Sould be enought in simnet

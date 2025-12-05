@@ -36,7 +36,7 @@ TODO :
 ### 2. Core Components
 - [X] **Frontend:** Deployment + Service + Ingress (stateless, scalable).
 - [X] **Backend:** Deployment + Service (stateless, responsible for discovering LND pods and unlocking/creating wallets).
-- [ ] **btcd:** StatefulSet + PVC + Service (Bitcoin full node).
+- [X] **btcd:** StatefulSet + PVC + Service (Bitcoin full node).
 - [ ] **LND:** StatefulSet + PVC + headless Service (multiple replicas, each with its own wallet/certs).
 
 ### 3. Data & Secrets Management
