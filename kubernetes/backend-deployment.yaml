@@ -20,23 +20,9 @@ spec:
         app: backend
     spec:
       containers:
-        - image: LMare/lightning-playground-backend:v0.2.0-SNAPSHOT
+        - image: LMare/lightning-playground-backend:v0.1.1
           name: backend
-          # TODO to delete to manage N lnd without modify config
-          volumeMounts:
-            - mountPath: /app/nodes-storage/.lnd1
-              name: lnd1-data
-            - mountPath: /app/nodes-storage/.lnd2
-              name: lnd2-data
           ports:
             - name: backend-port
               containerPort: 8080
       restartPolicy: Always
-      # TODO to delete to manage N lnd without modify config
-      volumes:
-        - name: lnd1-data
-          persistentVolumeClaim:
-            claimName: lnd1-data
-        - name: lnd2-data
-          persistentVolumeClaim:
-            claimName: lnd2-data

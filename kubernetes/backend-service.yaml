@@ -2,7 +2,7 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: backend-loadbalancer
+  name: backend
   namespace: lightning-playground
   labels:
       app: backend
@@ -11,6 +11,6 @@ spec:
   selector:
     app: backend
   ports:
-  - name: backend-entrypoint
-    port: 80
+  - name: backend
+    port: 8080
     targetPort: backend-port

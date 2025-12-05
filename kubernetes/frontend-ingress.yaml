@@ -15,6 +15,6 @@ spec:
         pathType: Prefix
         backend:
             service:
-                name: frontend-loadbalancer
+                name: frontend
                 port:
                     name: fe-entry

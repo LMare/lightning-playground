@@ -1,16 +1,16 @@
 
 
 services:
-  backend1:
+  backend:
     image: LMare/lightning-playground-backend:${APP_VERSION}
-    hostname: backend1
+    hostname: backend
     volumes:
       - lnd1_data:/app/nodes-storage/.lnd1
       - lnd2_data:/app/nodes-storage/.lnd2
 
-  frontend1:
+  frontend:
     image: LMare/lightning-playground-frontend:${APP_VERSION}
-    hostname: frontend1
+    hostname: frontend
     ports:
       - "${FRONTEND_PORT}:${FRONTEND_PORT}"
 

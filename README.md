@@ -97,8 +97,10 @@ TODO :
 docker buildx bake
 echo "127.0.0.1	lightning-playground.local" >> /etc/hosts
 cd kubernetes
+# cluster + docker images
 kind create cluster --name lightning-playground --config cluster.yaml
-kind load docker-image LMare/lightning-playground-frontend:v0.1.1 --name lightning-playground
+kind load docker-image LMare/lightning-playground-frontend:v0.2.0--SNAPSHOT --name lightning-playground
+kind load docker-image LMare/lightning-playground-backend:v0.1.1 --name lightning-playground
 
 kubectl create namespace lightning-playground
 # frontend
@@ -107,6 +109,8 @@ kubectl apply -f frontend-service.yaml -n lightning-playground
 kubectl apply -f frontend-ingress.yaml -n lightning-playground
 kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/kind/deploy.yaml
 # backend : TODO
+kubectl apply -f backend-deployment.yaml -n lightning-playground
+kubectl apply -f backend-service.yaml -n lightning-playground
 # btcd : TODO
 # lnd : TODO
 ```
