@@ -11,6 +11,6 @@ spec:
   selector:
       app: frontend
   ports:
-    - name: frontend-entrypoint
+    - name: fe-entry
       port: 80
       targetPort: frontend-port

@@ -92,6 +92,26 @@ TODO :
 
 
 -----------------------------------------------------------------------------------------------
+## Deploiment avec Kubernetes IN Docker
+```bash
+docker buildx bake
+echo "127.0.0.1	lightning-playground.local" >> /etc/hosts
+cd kubernetes
+kind create cluster --name lightning-playground --config cluster.yaml
+kind load docker-image LMare/lightning-playground-frontend:v0.1.1 --name lightning-playground
+
+kubectl create namespace lightning-playground
+# frontend
+kubectl apply -f frontend-deployment.yaml -n lightning-playground
+kubectl apply -f frontend-service.yaml -n lightning-playground
+kubectl apply -f frontend-ingress.yaml -n lightning-playground
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/kind/deploy.yaml
+# backend : TODO
+# btcd : TODO
+# lnd : TODO
+```
+Go to http://lightning-playground.local/
+-----------------------------------------------------------------------------------------------
 
 ## Prupose
 Be able to do a little web application to interract with and a lightning serveur running on simnet
