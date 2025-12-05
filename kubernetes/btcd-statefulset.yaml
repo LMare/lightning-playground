@@ -6,8 +6,11 @@ metadata:
     app: btcd
   name: btcd
   namespace : lightning-playground
+env:
+    - name: MINING_ADDR
+      value: rneZnvYmrLg9V6seGghNXmdfzatNsHgb54
 spec:
-  serviceName: btcd-headless  # pour servir l'url unique de chaque pod
+  serviceName: btcd-headless  # to give the unique url for each pod
   replicas: 1
   selector:
     matchLabels:
@@ -27,7 +30,7 @@ spec:
             - --listen=0.0.0.0:18555
             - --debuglevel=debug
             - --txindex
-            - --miningaddr=rneZnvYmrLg9V6seGghNXmdfzatNsHgb54
+            - --miningaddr=$(MINING_ADDR)
           image: btcsuite/btcd:v0.25.0
           name: btcd
           volumeMounts:
@@ -49,4 +52,4 @@ spec:
         accessModes: ["ReadWriteOnce"]
         resources:
           requests:
-            storage: 50Mi # Sould be enought in simnet
+            storage: 20Mi # Sould be enought in simnet

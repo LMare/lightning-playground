@@ -37,13 +37,16 @@ TODO :
 - [X] **Frontend:** Deployment + Service + Ingress (stateless, scalable).
 - [X] **Backend:** Deployment + Service (stateless, responsible for discovering LND pods and unlocking/creating wallets).
 - [X] **btcd:** StatefulSet + PVC + Service (Bitcoin full node).
-- [ ] **LND:** StatefulSet + PVC + headless Service (multiple replicas, each with its own wallet/certs).
+- [X] **LND:** StatefulSet + PVC + headless Service (multiple replicas, each with its own wallet/certs).
 
 ### 3. Data & Secrets Management
-- [ ] Define **PersistentVolumeClaims** for each LND and btcd.
-- [ ] Create a **Secret bundle** (`lnd-credentials`) to store certs/macaroons for all LND pods.
-- [ ] Implement a **job or init process** that copies certs/macaroons from LND PVCs into the Secret bundle.
-- [ ] Mount the Secret in the backend in read-only mode.
+- [X] Define **PersistentVolumeClaims** for each LND and btcd.
+- [ ] Create a **Secret bundle** (`lnd-credentials`) to store certs/macaroons for all **LND** pods.
+- [ ] Create a **Secret bundle** (`btcd-credentials`) to store certs for all (or once ?)  **BTCD** pods.
+- [ ] Implement a **job or init process** (sidecar ?) that copies certs/macaroons from **LND** PVCs into the Secret bundle.
+- [ ] Implement a **job or init process** (sidecar ?) that copies certs from **BTCD** PVCs into the Secret bundle.
+- [ ] Mount the lnd Secret in the backend in read-only mode.
+- [ ] Mount the btcd Secret in the lnd in read-only mode.
 
 ### 4. Backend Responsibilities
 - [ ] Discover LND pods via the headless service (`lnd-0.lnd-headless`, etc.).
