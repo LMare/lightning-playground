@@ -20,7 +20,7 @@ spec:
         app: frontend
     spec:
       containers:
-        - image: "LMare/lightning-playground-frontend:v0.2.0-SNAPSHOT"
+        - image: LMare/lightning-playground-frontend:v0.2.0-SNAPSHOT
           name: frontend
           ports:
             - name: frontend-port

@@ -54,3 +54,12 @@ go test ./backend/... -v
 # cover of TU + rapport
 go test -coverprofile=cover.out ./backend/handler/
 go tool cover -html=cover.out
+
+
+# start/stop cluster
+```bash
+docker start lightning-playground-control-plane
+docker stop lightning-playground-control-plane
+```
+=> semble poser des soucis d'IP en redémarrant... à tester :
+`kubectl delete deployment frontend -n lightning-playground`
