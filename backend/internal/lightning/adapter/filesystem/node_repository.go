@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 
 	config "github.com/Lmare/lightning-playground"
-	exception "github.com/Lmare/lightning-playground/backend/internal/shared/exception"
 	"github.com/Lmare/lightning-playground/backend/internal/lightning/port"
+	exception "github.com/Lmare/lightning-playground/backend/internal/shared/exception"
 )
 
 func NewNodeRepositoryFileSystem(conf *config.Config) port.NodeRepository {

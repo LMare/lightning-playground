@@ -11,7 +11,6 @@ import (
 	"sync"
 
 	//"time"
-	lnrpc "github.com/Lmare/lightning-playground/backend/gRPC/github.com/lightningnetwork/lnd/lnrpc"
 	//exception "github.com/Lmare/lightning-playground/backend/exception"
 )
 
@@ -178,8 +177,6 @@ func encode(v interface{}) string {
 	switch val := v.(type) {
 	case string:
 		return val
-	case *lnrpc.Payment:
-		return fmt.Sprintf("💸 Paiement de %d sats — statut : %s", val.ValueSat, val.Status.String())
 	case fmt.Stringer:
 		return val.String()
 	default:

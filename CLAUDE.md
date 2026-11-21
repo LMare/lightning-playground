@@ -33,15 +33,17 @@ LND wallets must be created manually on first launch (`lncli --network=simnet cr
 Entrypoints: `backend/cmd` (backend binary: `main.go` + `migration.go`), and `cmd/{frontend,sidecar-backend,sidecar-btcd,sidecar-lnd}` (each its own image; sidecars live in `sidecar/` and handle file/Kubernetes concerns such as macaroon/cert sharing). `config.go` at the repo root is the shared env-driven `Config` (`.env`).
 
 Backend is organised per bounded context under `backend/internal/`, each with `domain/`, `port/` (interfaces), `application/` (services) and `adapter/` (implementations):
-- `lightning/` — LND nodes. `adapter/filesystem` (NodeRepository: lists node dirs under `NodeStorage`), `adapter/grpc` (LND gRPC: `GrpcClientFactory`, `LightningInfoService`, `ChannelService`), `adapter/http` (HTMX handlers), `application/node_service.go` (builds cert/macaroon/URL for a node id).
+- `lightning/` — LND nodes. `domain/` (NodeID with validation, NodeSummary, NodeInfo, PeerAddress, PaymentUpdate, business errors; no json tags), `port/` (outbound: `NodeRepository`, `NodeInspector`, `ChannelGateway`, `PaymentGateway`, `PaymentProgress`, `PaymentNotifier`), `application/` (`NodeService`, `ChannelService`: use cases + business validation, depend only on ports). Adapters: `adapter/grpc` (`Gateway` implements the 3 LND ports; `GrpcClientFactory`/`ConnectionResolver` build the connection from config; LND protobuf types never leave this package), `adapter/filesystem` (NodeRepository), `adapter/stream` (PaymentNotifier → SSE hub in `platform/stream`), `adapter/http` (HTMX/JSON handlers + `dto.go` which holds the json tags / template field names).
 - `user/` — demo user CRUD. `adapter/postgres`, `adapter/http`, `application`, `port`, `domain`.
 - `bootstrap/` — manual composition root (`InitApp`: DB → repos → factories → services → handlers → router). Takes repos/factories as inputs so tests inject mocks.
 - `httpapi/` — shared HTTP helpers (HTMX/JSON responses, `Fail`), probe/version/stream handlers.
 - `platform/` — technical infra: `postgres` (sql.DB), `stream` (SSE sessions).
 - `shared/exception` — app error types. `gRPC/` — vendored LND `.proto` + generated stubs (regenerate with `protoc --go_out=. --go-grpc_out=.`; don't hand-edit `.pb.go`).
-- `testsupport/` + `integration/` — `NewTestHarness` assembles the real router with mock repos and a mock gRPC factory (`GrpcClientFactoryMock`, defined in `adapter/grpc/grpc_client_factory.go`).
+- `testsupport/` + `integration/` — `NewTestHarness` assembles the real router and services with mock repos and a mock gRPC factory.
 
-Known hexagonal impurities (in progress): `lightning/adapter/http` handlers depend on the concrete gRPC adapter services (`lndgrpc.LightningInfoService`/`ChannelService`) rather than on ports; there is no application/port layer for LND info/channel operations; the `GrpcClientFactory` interface has unexported methods; `NodeService` takes the whole `config.Config`.
+Remaining hexagonal work: the `user` context is still minimal; the `business/` + `infra/` folder split is planned (not done); `templates/personView` and HTML template paths (relative to cwd, `backend/templates/`) leak into handlers, so HTMX rendering is not covered by tests.
+
+Testing: unit tests per layer (domain, application with mocked ports, `adapter/grpc` with `testsupport.GrpcClientFactoryMock`) plus `integration/` tests through the real router (`NewTestHarness` exposes `MockUserRepo`, `MockNodeRepo`, `GrpcFactory.Lightning/Router` testify mocks of the LND clients). Prefer integration tests that cross the most layers. `go test -race` currently reports a pre-existing data race in `platform/stream` (`TestSessionStart`).
 
 ## Database (PostgreSQL)
 

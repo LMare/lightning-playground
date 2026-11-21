@@ -9,6 +9,7 @@ import (
 	"github.com/Lmare/lightning-playground/backend/internal/lightning/adapter/filesystem"
 	lndgrpc "github.com/Lmare/lightning-playground/backend/internal/lightning/adapter/grpc"
 	lightninghttp "github.com/Lmare/lightning-playground/backend/internal/lightning/adapter/http"
+	lightningstream "github.com/Lmare/lightning-playground/backend/internal/lightning/adapter/stream"
 	lightningapp "github.com/Lmare/lightning-playground/backend/internal/lightning/application"
 	"github.com/Lmare/lightning-playground/backend/internal/lightning/port"
 	"github.com/Lmare/lightning-playground/backend/internal/platform/postgres"
@@ -31,10 +32,9 @@ type Factories struct {
 }
 
 type services struct {
-	user          *userapp.UserService
-	node          *lightningapp.NodeService
-	lightningInfo *lndgrpc.LightningInfoService
-	channel       *lndgrpc.ChannelService
+	user    *userapp.UserService
+	node    *lightningapp.NodeService
+	channel *lightningapp.ChannelService
 }
 
 type handlers struct {
@@ -69,11 +69,11 @@ func InitFactories() *Factories {
 
 // InitServices wires the application layer and LND services.
 func InitServices(r *Repositories, f *Factories, conf *config.Config) *services {
+	lnd := lndgrpc.NewGateway(f.GrpcClientFactory, lndgrpc.NewConfigConnectionResolver(conf))
 	return &services{
-		user:          userapp.NewUserService(r.User),
-		node:          lightningapp.NewNodeService(*conf, r.Node),
-		lightningInfo: lndgrpc.NewLightningInfoService(f.GrpcClientFactory),
-		channel:       lndgrpc.NewChannelService(f.GrpcClientFactory),
+		user:    userapp.NewUserService(r.User),
+		node:    lightningapp.NewNodeService(r.Node, lnd),
+		channel: lightningapp.NewChannelService(lnd, lnd, lightningstream.NewPaymentNotifier()),
 	}
 }
 
@@ -81,7 +81,7 @@ func InitServices(r *Repositories, f *Factories, conf *config.Config) *services 
 func InitHandlers(s *services, conf *config.Config) *handlers {
 	return &handlers{
 		user:        userhttp.NewHandler(s.user),
-		lightning:   lightninghttp.NewHandler(s.lightningInfo, s.channel, s.node),
+		lightning:   lightninghttp.NewHandler(s.node, s.channel),
 		probe:       httpapi.NewProbeHandler(),
 		version:     httpapi.NewVersionHandler(conf.Version),
 		streamEvent: httpapi.NewStreamHandler(),

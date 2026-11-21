@@ -6,19 +6,27 @@ import (
 	"fmt"
 	"os"
 
-	exception "github.com/Lmare/lightning-playground/backend/internal/shared/exception"
-	"github.com/Lmare/lightning-playground/backend/internal/lightning/domain"
 	lnrpc "github.com/Lmare/lightning-playground/backend/gRPC/github.com/lightningnetwork/lnd/lnrpc"
 	routerrpc "github.com/Lmare/lightning-playground/backend/gRPC/github.com/lightningnetwork/lnd/lnrpc/routerrpc"
+	exception "github.com/Lmare/lightning-playground/backend/internal/shared/exception"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 )
 
-type GrpcClientFactory interface {
-	newClient(dataClient domain.LndClientAuthData) (grpcClient, error)
+// NodeConnection holds what is needed to open a secure gRPC connection to a node.
+type NodeConnection struct {
+	TLSCertPath  string
+	MacaroonPath string
+	Address      string
 }
 
-type grpcClient interface {
+// GrpcClientFactory opens gRPC clients to an LND node.
+type GrpcClientFactory interface {
+	NewClient(conn NodeConnection) (GrpcClient, error)
+}
+
+// GrpcClient gives access to the LND services; Close releases the connection.
+type GrpcClient interface {
 	GetLightningClient() lnrpc.LightningClient
 	GetRouterClient() routerrpc.RouterClient
 	Close() error
@@ -29,8 +37,8 @@ type grpcClient interface {
 type grpcClientFactoryImpl struct {
 }
 
-// NewGrpcClientFactory builds a factory backed by real gRPC connections.
-func (f *grpcClientFactoryImpl) newClient(dataClient domain.LndClientAuthData) (grpcClient, error) {
+// NewClient opens a real gRPC connection.
+func (f *grpcClientFactoryImpl) NewClient(dataClient NodeConnection) (GrpcClient, error) {
 	conn, err := f.createGrpcClientConn(dataClient)
 	if err != nil {
 		err := exception.NewError("Error creating gRPC communication channel", err, exception.NewExampleError)
@@ -45,12 +53,12 @@ func (f *grpcClientFactoryImpl) newClient(dataClient domain.LndClientAuthData) (
 }
 
 // createGrpcClientConn create a secure gRPC connection
-func (f *grpcClientFactoryImpl) createGrpcClientConn(dataClient domain.LndClientAuthData) (*grpc.ClientConn, error) {
+func (f *grpcClientFactoryImpl) createGrpcClientConn(dataClient NodeConnection) (*grpc.ClientConn, error) {
 
 	// Charger le certificat TLS
-	cert, err := os.ReadFile(dataClient.TlsCertPath)
+	cert, err := os.ReadFile(dataClient.TLSCertPath)
 	if err != nil {
-		err := exception.NewError(fmt.Sprintf("Erreur lecture TLS cert : %s", dataClient.TlsCertPath), err, exception.NewExampleError)
+		err := exception.NewError(fmt.Sprintf("Erreur lecture TLS cert : %s", dataClient.TLSCertPath), err, exception.NewExampleError)
 		return nil, err
 	}
 	certPool := x509.NewCertPool()
@@ -67,7 +75,7 @@ func (f *grpcClientFactoryImpl) createGrpcClientConn(dataClient domain.LndClient
 
 	// Créer un dial gRPC sécurisé
 	return grpc.NewClient(
-		dataClient.LndAddress,
+		dataClient.Address,
 		grpc.WithTransportCredentials(creds),
 		grpc.WithPerRPCCredentials(newMacaroonCreds(macaroonHex)),
 	)
@@ -123,31 +131,3 @@ func (f *grpcClientImpl) Close() error {
 	}
 	return nil
 }
-
-// ---------------- Mock for test ----------------
-
-// Mock Factory
-type GrpcClientFactoryMock struct {
-	lightningClient lnrpc.LightningClient
-	routerClient    routerrpc.RouterClient
-}
-
-// create a mocked grpc client
-func (f *GrpcClientFactoryMock) newClient(dataClient domain.LndClientAuthData) (grpcClient, error) {
-	return &grpcClientImpl{
-		lightningClient: f.lightningClient,
-		routerClient:    f.routerClient,
-		conn:            nil,
-	}, nil
-}
-
-// constructor for the mock factory
-func NewGrpcClientFactoryMock(lightningClient lnrpc.LightningClient, routerClient routerrpc.RouterClient) *GrpcClientFactoryMock {
-	return &GrpcClientFactoryMock{
-		lightningClient: lightningClient,
-		routerClient:    routerClient,
-	}
-}
-
-// assertion compile-time
-var _ GrpcClientFactory = (*GrpcClientFactoryMock)(nil)

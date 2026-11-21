@@ -1,80 +1,80 @@
 package lightninghttp
 
 import (
+	"errors"
 	"html/template"
 	"net/http"
-	"regexp"
 	"strconv"
 	"strings"
 
 	"github.com/Lmare/lightning-playground/backend/internal/httpapi"
-	lndgrpc "github.com/Lmare/lightning-playground/backend/internal/lightning/adapter/grpc"
 	"github.com/Lmare/lightning-playground/backend/internal/lightning/application"
+	"github.com/Lmare/lightning-playground/backend/internal/lightning/domain"
 )
 
-func NewHandler(lightningInfoService *lndgrpc.LightningInfoService, channelService *lndgrpc.ChannelService, nodeService *application.NodeService) *Handler {
-	return &Handler{
-		lightningInfoService: lightningInfoService,
-		channelService:       channelService,
-		nodeService:          nodeService,
-	}
+func NewHandler(nodeService *application.NodeService, channelService *application.ChannelService) *Handler {
+	return &Handler{nodeService: nodeService, channelService: channelService}
 }
 
 type Handler struct {
-	lightningInfoService *lndgrpc.LightningInfoService
-	channelService       *lndgrpc.ChannelService
-	nodeService          *application.NodeService
+	nodeService    *application.NodeService
+	channelService *application.ChannelService
+}
+
+// nodeIDFromRequest reads and validates the "id" parameter; it writes the error response when invalid.
+func nodeIDFromRequest(response http.ResponseWriter, request *http.Request, message string) (domain.NodeID, bool) {
+	id, err := domain.ParseNodeID(request.FormValue("id"))
+	if err != nil {
+		httpapi.FailCheck(response, request, message, nil)
+		return "", false
+	}
+	return id, true
+}
+
+// failUseCase answers with 400 for business validation errors and 500 for the others.
+func failUseCase(response http.ResponseWriter, request *http.Request, message string, err error) {
+	if errors.Is(err, domain.ErrInvalidPeerAddress) || errors.Is(err, domain.ErrInvalidAmount) {
+		httpapi.FailCheck(response, request, message, err)
+		return
+	}
+	httpapi.Fail(response, request, message, err)
 }
 
 // get the list of node
 func (h *Handler) HandleListOfNodes(response http.ResponseWriter, request *http.Request) {
-
-	descriptors, err := h.nodeService.ListOfNodes()
+	nodes, err := h.nodeService.ListNodes(request.Context())
 	if err != nil {
 		httpapi.Fail(response, request, "Error on listing nodes", err)
 		return
 	}
 
-	nodes := h.lightningInfoService.GetListOfNode(descriptors)
+	dtos := toNodeSummaryDTOs(nodes)
 	if httpapi.IsHTMX(request) {
-		httpapi.HTMXResponse(response, "lightning/nodes.html", nodes)
+		httpapi.HTMXResponse(response, "lightning/nodes.html", dtos)
 	} else {
-		httpapi.JSONResponse(response, nodes)
+		httpapi.JSONResponse(response, dtos)
 	}
-}
-
-// check if the format of the id is valid
-func isVaildFormatOfId(id string) bool {
-	re := regexp.MustCompile(`^[a-zA-Z0-9_-]+$`)
-	return re.MatchString(id)
 }
 
 // get the URI of the node
 func (h *Handler) HandleShowUri(response http.ResponseWriter, request *http.Request) {
-	// node id parameter
-	id := request.FormValue("id")
-	if !isVaildFormatOfId(id) {
-		httpapi.FailCheck(response, request, "Pas d'id transmis", nil)
+	id, ok := nodeIDFromRequest(response, request, "Pas d'id transmis")
+	if !ok {
 		return
 	}
-	// LND client connection details for this node
-	authData := h.nodeService.GetLndClientAuthData(id)
 
-	// get the uri of the node
-	uri, err := h.lightningInfoService.GetFirstUri(authData)
+	uri, err := h.nodeService.GetURI(request.Context(), id)
 	if err != nil {
 		httpapi.Fail(response, request, "Echec de la communication avec le noeud LND", err)
 		return
 	}
 
-	// Render
 	if httpapi.IsHTMX(request) {
 		funcMap := template.FuncMap{"truncateUri": truncateUri}
 		httpapi.HTMXResponseWithFuncs(response, "lightning/uri.html", uri, funcMap)
 	} else {
 		httpapi.JSONResponse(response, uri)
 	}
-
 }
 
 // reduce an uri
@@ -104,52 +104,39 @@ func truncate(s string, n int) string {
 
 // get the info of one Node
 func (h *Handler) HandleNodeInfo(response http.ResponseWriter, request *http.Request) {
-	// node id parameter
-	id := request.FormValue("id")
-	if !isVaildFormatOfId(id) {
-		httpapi.FailCheck(response, request, "Pas d'id transmis", nil)
+	id, ok := nodeIDFromRequest(response, request, "Pas d'id transmis")
+	if !ok {
 		return
 	}
-	// LND client connection details for this node
-	authData := h.nodeService.GetLndClientAuthData(id)
 
-	// get the info of the node
-	data, err := h.lightningInfoService.GetUsefullInfo(authData)
+	info, err := h.nodeService.GetInfo(request.Context(), id)
 	if err != nil {
 		httpapi.Fail(response, request, "Echec de la communication avec le noeud LND", err)
 		return
 	}
 
-	// Render
+	dto := toNodeInfoDTO(info)
 	if httpapi.IsHTMX(request) {
-		httpapi.HTMXResponse(response, "lightning/nodeInfo.html", data)
+		httpapi.HTMXResponse(response, "lightning/nodeInfo.html", dto)
 	} else {
-		httpapi.JSONResponse(response, data)
+		httpapi.JSONResponse(response, dto)
 	}
 }
 
 // Create a connexion to a new Peer
 func (h *Handler) HandleAddPeer(response http.ResponseWriter, request *http.Request) {
-	// Parse request body (form)
-	err := request.ParseForm()
-	if err != nil {
+	if err := request.ParseForm(); err != nil {
 		http.Error(response, "Erreur de parsing", http.StatusBadRequest)
 		return
 	}
 
-	id := request.FormValue("id")
-	if !isVaildFormatOfId(id) {
-		httpapi.FailCheck(response, request, "Pas d'id transmis", nil)
+	id, ok := nodeIDFromRequest(response, request, "Pas d'id transmis")
+	if !ok {
 		return
 	}
-	uri := request.FormValue("uri")
-	// Get Data to connect lnd
-	authData := h.nodeService.GetLndClientAuthData(id)
 
-	// Add the pair
-	err = h.channelService.AddPeer(authData, uri)
-	if err != nil {
-		httpapi.Fail(response, request, "Fail to add the peer.", err)
+	if err := h.channelService.AddPeer(request.Context(), id, request.FormValue("uri")); err != nil {
+		failUseCase(response, request, "Fail to add the peer.", err)
 		return
 	}
 
@@ -162,34 +149,23 @@ func (h *Handler) HandleAddPeer(response http.ResponseWriter, request *http.Requ
 
 // create a channel
 func (h *Handler) HandleOpenChannel(response http.ResponseWriter, request *http.Request) {
-
-	// Parse request body (form)
-	err := request.ParseForm()
-	if err != nil {
+	if err := request.ParseForm(); err != nil {
 		httpapi.FailCheck(response, request, "Parse error", err)
 		return
 	}
 
-	id := request.FormValue("id")
-	if !isVaildFormatOfId(id) {
-		httpapi.FailCheck(response, request, "Pas d'id transmis", nil)
+	id, ok := nodeIDFromRequest(response, request, "Pas d'id transmis")
+	if !ok {
 		return
 	}
-	pubKey := request.FormValue("pubKey")
-	amountStr := request.FormValue("amount")
-	amount, err := strconv.ParseInt(amountStr, 10, 64)
+	amount, err := strconv.ParseInt(request.FormValue("amount"), 10, 64)
 	if err != nil {
 		httpapi.FailCheck(response, request, "Amount value incorrect", err)
 		return
 	}
 
-	// Get Data to connect lnd
-	authData := h.nodeService.GetLndClientAuthData(id)
-
-	// create the channel
-	err = h.channelService.OpenChannel(authData, pubKey, amount)
-	if err != nil {
-		httpapi.Fail(response, request, "Fail to create the channel.", err)
+	if err := h.channelService.OpenChannel(request.Context(), id, request.FormValue("pubKey"), amount); err != nil {
+		failUseCase(response, request, "Fail to create the channel.", err)
 		return
 	}
 
@@ -202,59 +178,44 @@ func (h *Handler) HandleOpenChannel(response http.ResponseWriter, request *http.
 
 // Create an invoice
 func (h *Handler) HandleCreateInvoice(response http.ResponseWriter, request *http.Request) {
-
-	// Parse request body (form)
-	err := request.ParseForm()
-	if err != nil {
+	if err := request.ParseForm(); err != nil {
 		httpapi.FailCheck(response, request, "Parse error", err)
 		return
 	}
 
-	id := request.FormValue("id")
-	if !isVaildFormatOfId(id) {
-		httpapi.FailCheck(response, request, "Pas d'id transmis", nil)
+	id, ok := nodeIDFromRequest(response, request, "Pas d'id transmis")
+	if !ok {
 		return
 	}
-	memo := request.FormValue("memo")
-	amountStr := request.FormValue("amount")
-	amount, err := strconv.ParseInt(amountStr, 10, 64)
+	amount, err := strconv.ParseInt(request.FormValue("amount"), 10, 64)
 	if err != nil {
 		httpapi.FailCheck(response, request, "Amount value incorrect", err)
 		return
 	}
 
-	// Get Data to connect lnd
-	authData := h.nodeService.GetLndClientAuthData(id)
-
-	// create the invoice
-	p, err := h.channelService.CreateQuickInvoice(authData, memo, amount)
+	paymentRequest, err := h.channelService.CreateInvoice(request.Context(), id, request.FormValue("memo"), amount)
 	if err != nil {
-		httpapi.Fail(response, request, "Fail to create the invoice.", err)
+		failUseCase(response, request, "Fail to create the invoice.", err)
 		return
 	}
 
-	// Render
 	if httpapi.IsHTMX(request) {
 		funcMap := template.FuncMap{"truncate": truncate}
-		httpapi.HTMXResponseWithFuncs(response, "lightning/paymentRequest.html", p, funcMap)
+		httpapi.HTMXResponseWithFuncs(response, "lightning/paymentRequest.html", paymentRequest, funcMap)
 	} else {
-		httpapi.JSONResponse(response, p)
+		httpapi.JSONResponse(response, paymentRequest)
 	}
-
 }
 
 // Make the payment
 func (h *Handler) HandleMakePayment(response http.ResponseWriter, request *http.Request) {
-	// Parse request body (form)
-	err := request.ParseForm()
-	if err != nil {
+	if err := request.ParseForm(); err != nil {
 		httpapi.FailCheck(response, request, "Error parsing form", err)
 		return
 	}
 
-	id := request.FormValue("id")
-	if !isVaildFormatOfId(id) {
-		httpapi.FailCheck(response, request, "Missing ID", nil)
+	id, ok := nodeIDFromRequest(response, request, "Missing ID")
+	if !ok {
 		return
 	}
 	paymentRequest := request.FormValue("paymentRequest")
@@ -263,13 +224,9 @@ func (h *Handler) HandleMakePayment(response http.ResponseWriter, request *http.
 		return
 	}
 
-	// Get Data to connect lnd
-	authData := h.nodeService.GetLndClientAuthData(id)
-
 	// pay the invoice (async updates via SSE)
-	err = h.channelService.MakePayment(authData, paymentRequest)
-	if err != nil {
-		httpapi.Fail(response, request, "Fail to pay the invoice.", err)
+	if err := h.channelService.Pay(request.Context(), id, paymentRequest); err != nil {
+		failUseCase(response, request, "Fail to pay the invoice.", err)
 		return
 	}
 
@@ -279,14 +236,11 @@ func (h *Handler) HandleMakePayment(response http.ResponseWriter, request *http.
 	} else {
 		httpapi.OkNoContent(response)
 	}
-
 }
 
 // Update name of the node & color
 func (h *Handler) HandleUpdateNodeAlias(response http.ResponseWriter, request *http.Request) {
-	// Parse request body (form)
-	err := request.ParseForm()
-	if err != nil {
+	if err := request.ParseForm(); err != nil {
 		httpapi.FailCheck(response, request, "Parse error", err)
 		return
 	}
@@ -301,20 +255,14 @@ func (h *Handler) HandleUpdateNodeAlias(response http.ResponseWriter, request *h
 		httpapi.FailCheck(response, request, "Missing color", nil)
 		return
 	}
-
-	// node id parameter
-	id := request.FormValue("id")
-	if !isVaildFormatOfId(id) {
-		httpapi.FailCheck(response, request, "Missing ID", nil)
+	id, ok := nodeIDFromRequest(response, request, "Missing ID")
+	if !ok {
 		return
 	}
 
-	// LND connection info for this node
-	authData := h.nodeService.GetLndClientAuthData(id)
-
-	err = h.lightningInfoService.UpdateAliasAndColor(authData, alias, color)
-	if err != nil {
+	if err := h.nodeService.UpdateAppearance(request.Context(), id, alias, color); err != nil {
 		httpapi.Fail(response, request, "Modifications fail.", err)
+		return
 	}
 
 	if httpapi.IsHTMX(request) {
@@ -322,5 +270,4 @@ func (h *Handler) HandleUpdateNodeAlias(response http.ResponseWriter, request *h
 	} else {
 		httpapi.OkNoContent(response)
 	}
-
 }

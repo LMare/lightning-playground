@@ -1,46 +1,62 @@
 package application
 
 import (
-	config "github.com/Lmare/lightning-playground"
-	exception "github.com/Lmare/lightning-playground/backend/internal/shared/exception"
+	"context"
+	"log"
+
 	"github.com/Lmare/lightning-playground/backend/internal/lightning/domain"
 	"github.com/Lmare/lightning-playground/backend/internal/lightning/port"
 )
 
-func NewNodeService(conf config.Config, repo port.NodeRepository) *NodeService {
-	return &NodeService{conf: conf, repo: repo}
+func NewNodeService(repo port.NodeRepository, inspector port.NodeInspector) *NodeService {
+	return &NodeService{repo: repo, inspector: inspector}
 }
 
+// NodeService is the use case set about the nodes themselves.
 type NodeService struct {
-	conf config.Config
-	repo port.NodeRepository
+	repo      port.NodeRepository
+	inspector port.NodeInspector
 }
 
-// Return the info to connect to the nodes
-func (n *NodeService) ListOfNodes() ([]domain.NodeConfigDescriptor, error) {
-	nodes := []domain.NodeConfigDescriptor{}
-
-	ids, err := n.repo.GetNodesIds()
+// ListNodes returns the summary of every reachable node; unreachable nodes are skipped.
+func (s *NodeService) ListNodes(ctx context.Context) ([]domain.NodeSummary, error) {
+	ids, err := s.repo.GetNodesIds()
 	if err != nil {
-		return nodes, exception.NewError("Error getNodesIds", err, exception.NewExampleError)
+		return nil, err
 	}
 
-	for _, id := range ids {
-		nodes = append(nodes, n.getNodeConfigDescriptor(id))
+	nodes := make([]domain.NodeSummary, 0, len(ids))
+	for _, raw := range ids {
+		id, err := domain.ParseNodeID(raw)
+		if err != nil {
+			log.Printf("[WARN] ignoring node %q: %v", raw, err)
+			continue
+		}
+		summary, err := s.inspector.GetSummary(ctx, id)
+		if err != nil {
+			log.Printf("[WARN] ignoring node %q: %v", raw, err)
+			continue
+		}
+		nodes = append(nodes, summary)
 	}
-
 	return nodes, nil
 }
 
-// the instance of NodeConfigDescriptor for the node Id
-func (n *NodeService) getNodeConfigDescriptor(id string) domain.NodeConfigDescriptor {
-	return domain.NodeConfigDescriptor{Id: id, AuthData: n.GetLndClientAuthData(id)}
+// GetInfo returns the detailed state of a node.
+func (s *NodeService) GetInfo(ctx context.Context, id domain.NodeID) (domain.NodeInfo, error) {
+	return s.inspector.GetInfo(ctx, id)
 }
 
-// the instance of LndClientAuthData for the Id
-func (n *NodeService) GetLndClientAuthData(id string) domain.LndClientAuthData {
-	certPath := n.conf.NodeStorage + id + "/tls.cert"
-	macarronPath := n.conf.NodeStorage + id + "/data/chain/bitcoin/" + n.conf.LndNetwork + "/admin.macaroon"
-	url := id + "." + n.conf.LndDomain + ":10009"
-	return domain.NewLndClientAuthData(certPath, macarronPath, url)
+// GetURI returns the first public URI of a node ("" if none).
+func (s *NodeService) GetURI(ctx context.Context, id domain.NodeID) (string, error) {
+	info, err := s.inspector.GetInfo(ctx, id)
+	if err != nil {
+		return "", err
+	}
+	return info.FirstURI(), nil
+}
+
+// UpdateAppearance changes the alias and the color of a node.
+func (s *NodeService) UpdateAppearance(ctx context.Context, id domain.NodeID, alias, color string) error {
+	return s.inspector.UpdateAppearance(ctx, id, alias, color)
 }
