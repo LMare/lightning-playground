@@ -3,3 +3,6 @@ pkg
 .vscode/
 cover.out
 kubernetes/helm/monitoring/charts/
+
+# truc en local => à retrouver pourquoi
+docker

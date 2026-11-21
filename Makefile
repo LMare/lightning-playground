@@ -95,6 +95,41 @@ deploy-postgres:
 		--set auth.password=apppassword \
 		--set auth.database=appdb
 
+deploy-nat-jet-stream:
+	#helm repo add nats https://nats-io.github.io/k8s/helm/charts/
+	#helm repo update
+	helm upgrade --install nats nats/nats \
+		-n nats-lab \
+		--set jetstream.enabled=true \
+		--set jetstream.fileStore.enabled=true \
+		--set jetstream.fileStore.dir=/data \
+		--set jetstream.fileStore.pvc.enabled=true \
+		--set jetstream.fileStore.pvc.size=10Gi
 
 
-.PHONY: load-images create-cluster delete-cluster deploy add-in-hosts all check-deps bake-all bake-app bump-version refresh-new-version deploy-monitoring-stack deploy-postgres
+	# Wait the install
+	kubectl rollout status statefulset/nats -n nats-lab
+	# attendre que JetStream soit prêt
+	#kubectl exec -n nats-lab deploy/nats-box -- nats server check jetstream
+	# create canal for the payments notifications
+	kubectl exec -it -n nats-lab deploy/nats-box -- \
+		nats stream add payments \
+		--subjects "ln.payments" \
+		--storage file \
+		--retention workq \
+		--replicas=1 \
+		--discard=old \
+		--max-msgs=-1 \
+		--max-msgs-per-subject=-1 \
+		--max-bytes=-1 \
+		--max-age=-1 \
+		--max-msg-size=-1 \
+		--dupe-window=0 \
+		
+		--rollup=false
+
+
+
+
+
+.PHONY: load-images create-cluster delete-cluster deploy add-in-hosts all check-deps bake-all bake-app bump-version refresh-new-version deploy-monitoring-stack deploy-postgres deploy-nat-jet-stream
