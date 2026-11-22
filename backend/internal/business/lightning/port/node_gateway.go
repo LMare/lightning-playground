@@ -9,6 +9,8 @@ import (
 // NodeInspector is the outbound port to read and configure a Lightning node.
 type NodeInspector interface {
 	GetSummary(ctx context.Context, id domain.NodeID) (domain.NodeSummary, error)
+	// GetWalletState returns the wallet state. An error means the node could not be queried.
+	GetWalletState(ctx context.Context, id domain.NodeID) (domain.WalletState, error)
 	GetInfo(ctx context.Context, id domain.NodeID) (domain.NodeInfo, error)
 	UpdateAppearance(ctx context.Context, id domain.NodeID, alias, color string) error
 }

@@ -18,7 +18,8 @@ type NodeService struct {
 	inspector port.NodeInspector
 }
 
-// ListNodes returns the summary of every reachable node; unreachable nodes are skipped.
+// ListNodes returns every node with its wallet state. Alias and color are only filled when the
+// node is ready to answer GetInfo; unreachable nodes are kept with the state "unreachable".
 func (s *NodeService) ListNodes(ctx context.Context) ([]domain.NodeSummary, error) {
 	ids, err := s.repo.GetNodesIds()
 	if err != nil {
@@ -32,10 +33,20 @@ func (s *NodeService) ListNodes(ctx context.Context) ([]domain.NodeSummary, erro
 			log.Printf("[WARN] ignoring node %q: %v", raw, err)
 			continue
 		}
-		summary, err := s.inspector.GetSummary(ctx, id)
+		state, err := s.inspector.GetWalletState(ctx, id)
 		if err != nil {
-			log.Printf("[WARN] ignoring node %q: %v", raw, err)
-			continue
+			log.Printf("[WARN] node %q unreachable: %v", raw, err)
+			state = domain.WalletUnreachable
+		}
+		summary := domain.NodeSummary{ID: id, WalletState: state}
+		if state.IsReady() {
+			got, err := s.inspector.GetSummary(ctx, id)
+			if err != nil {
+				log.Printf("[WARN] no summary for node %q: %v", raw, err)
+			} else {
+				summary = got
+				summary.WalletState = state
+			}
 		}
 		nodes = append(nodes, summary)
 	}

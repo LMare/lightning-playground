@@ -1,7 +1,8 @@
 
 {{range .}}
-	<tr data-id="{{.Id}}" data-alias="{{.Alias}}" data-color="{{.Color}}">
+	<tr data-id="{{.Id}}" data-alias="{{.Alias}}" data-color="{{.Color}}" data-wallet-state="{{.WalletState}}">
 		<th scope="row" >{{.Id}}</th>
 		<td style="color: {{.Color}}">{{.Alias}}</td>
+		<td>{{.WalletLabel}}</td>
 	</tr>
 {{end}}

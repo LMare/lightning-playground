@@ -48,6 +48,39 @@ func (g *Gateway) GetSummary(ctx context.Context, id domain.NodeID) (domain.Node
 	return domain.NodeSummary{ID: id, Alias: resp.GetAlias(), Color: resp.GetColor()}, nil
 }
 
+func (g *Gateway) GetWalletState(ctx context.Context, id domain.NodeID) (domain.WalletState, error) {
+	client, err := g.open(id)
+	if err != nil {
+		return "", err
+	}
+	defer client.Close()
+
+	resp, err := client.GetStateClient().GetState(ctx, &lnrpc.GetStateRequest{})
+	if err != nil {
+		return "", exception.NewError(fmt.Sprintf("Unable to get wallet state of Node[%s]", id), err)
+	}
+	return toWalletState(resp.GetState()), nil
+}
+
+func toWalletState(s lnrpc.WalletState) domain.WalletState {
+	switch s {
+	case lnrpc.WalletState_NON_EXISTING:
+		return domain.WalletNonExisting
+	case lnrpc.WalletState_LOCKED:
+		return domain.WalletLocked
+	case lnrpc.WalletState_UNLOCKED:
+		return domain.WalletUnlocked
+	case lnrpc.WalletState_RPC_ACTIVE:
+		return domain.WalletRPCActive
+	case lnrpc.WalletState_SERVER_ACTIVE:
+		return domain.WalletServerActive
+	case lnrpc.WalletState_WAITING_TO_START:
+		return domain.WalletWaitingToStart
+	default:
+		return domain.WalletUnknown
+	}
+}
+
 func (g *Gateway) GetInfo(ctx context.Context, id domain.NodeID) (domain.NodeInfo, error) {
 	resp, err := g.getInfo(ctx, id)
 	if err != nil {

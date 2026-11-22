@@ -44,6 +44,7 @@ func TestHTMX_ListUsers(t *testing.T) {
 func TestHTMX_ListNodes(t *testing.T) {
 	h := testsupport.NewTestHarness()
 	h.MockNodeRepo.On("GetNodesIds").Return([]string{"lnd-0"}, nil)
+	h.GrpcFactory.State.On("GetState", mock.Anything, mock.Anything).Return(&lnrpc.GetStateResponse{State: lnrpc.WalletState_SERVER_ACTIVE}, nil)
 	h.GrpcFactory.Lightning.On("GetInfo", mock.Anything, mock.Anything).Return(&lnrpc.GetInfoResponse{Alias: "alice", Color: "#ff0000"}, nil)
 
 	rr := doHTMX(h, http.MethodGet, "/lightning/nodes", nil)
@@ -51,6 +52,21 @@ func TestHTMX_ListNodes(t *testing.T) {
 	assert.Equal(t, http.StatusOK, rr.Code)
 	assert.Contains(t, rr.Body.String(), `data-id="lnd-0"`)
 	assert.Contains(t, rr.Body.String(), "alice")
+	assert.Contains(t, rr.Body.String(), `data-wallet-state="server_active"`)
+	assert.Contains(t, rr.Body.String(), "Unlocked")
+}
+
+func TestHTMX_ListNodes_LockedNode(t *testing.T) {
+	h := testsupport.NewTestHarness()
+	h.MockNodeRepo.On("GetNodesIds").Return([]string{"lnd-0"}, nil)
+	h.GrpcFactory.State.On("GetState", mock.Anything, mock.Anything).Return(&lnrpc.GetStateResponse{State: lnrpc.WalletState_LOCKED}, nil)
+
+	rr := doHTMX(h, http.MethodGet, "/lightning/nodes", nil)
+
+	assert.Equal(t, http.StatusOK, rr.Code)
+	assert.Contains(t, rr.Body.String(), `data-id="lnd-0"`)
+	assert.Contains(t, rr.Body.String(), `data-wallet-state="locked"`)
+	assert.Contains(t, rr.Body.String(), "Locked")
 }
 
 func TestHTMX_NodeInfo(t *testing.T) {

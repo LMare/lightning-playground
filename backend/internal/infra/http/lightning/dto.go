@@ -5,9 +5,11 @@ import "github.com/Lmare/lightning-playground/backend/internal/business/lightnin
 // DTOs expose the domain over HTTP. The field names are also used by the HTML templates.
 
 type nodeSummaryDTO struct {
-	Id    string `json:"id"`
-	Alias string `json:"alias"`
-	Color string `json:"color"`
+	Id          string `json:"id"`
+	Alias       string `json:"alias"`
+	Color       string `json:"color"`
+	WalletState string `json:"walletState"`
+	WalletLabel string `json:"walletLabel"`
 }
 
 type nodeInfoDTO struct {
@@ -27,7 +29,8 @@ type nodeInfoDTO struct {
 func toNodeSummaryDTOs(nodes []domain.NodeSummary) []nodeSummaryDTO {
 	dtos := make([]nodeSummaryDTO, 0, len(nodes))
 	for _, n := range nodes {
-		dtos = append(dtos, nodeSummaryDTO{Id: n.ID.String(), Alias: n.Alias, Color: n.Color})
+		dtos = append(dtos, nodeSummaryDTO{Id: n.ID.String(), Alias: n.Alias, Color: n.Color,
+			WalletState: string(n.WalletState), WalletLabel: walletLabel(n.WalletState)})
 	}
 	return dtos
 }
@@ -45,5 +48,23 @@ func toNodeInfoDTO(n domain.NodeInfo) nodeInfoDTO {
 		Uris:                n.URIs,
 		SyncedToChain:       n.SyncedToChain,
 		SyncedToGraph:       n.SyncedToGraph,
+	}
+}
+
+// walletLabel groups the wallet states into the labels shown in the node list.
+func walletLabel(s domain.WalletState) string {
+	switch s {
+	case domain.WalletServerActive:
+		return "Unlocked"
+	case domain.WalletRPCActive, domain.WalletUnlocked, domain.WalletWaitingToStart:
+		return "Starting"
+	case domain.WalletLocked:
+		return "Locked"
+	case domain.WalletNonExisting:
+		return "No wallet"
+	case domain.WalletUnreachable:
+		return "Unreachable"
+	default:
+		return "Unknown"
 	}
 }

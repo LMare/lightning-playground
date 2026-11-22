@@ -12,18 +12,33 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-func TestListNodes_SkipsInvalidAndUnreachableNodes(t *testing.T) {
+func TestListNodes_WalletStates(t *testing.T) {
 	repo := &testsupport.MockNodeRepository{}
 	inspector := &testsupport.MockNodeInspector{}
-	repo.On("GetNodesIds").Return([]string{"lnd-0", "bad id", "lnd-1", "lnd-2"}, nil)
+	repo.On("GetNodesIds").Return([]string{"lnd-0", "bad id", "lnd-1", "lnd-2", "lnd-3"}, nil)
+	// ready: merged summary
+	inspector.On("GetWalletState", mock.Anything, domain.NodeID("lnd-0")).Return(domain.WalletServerActive, nil)
 	inspector.On("GetSummary", mock.Anything, domain.NodeID("lnd-0")).Return(domain.NodeSummary{ID: "lnd-0", Alias: "alice", Color: "#fff"}, nil)
-	inspector.On("GetSummary", mock.Anything, domain.NodeID("lnd-1")).Return(domain.NodeSummary{}, errors.New("unreachable"))
-	inspector.On("GetSummary", mock.Anything, domain.NodeID("lnd-2")).Return(domain.NodeSummary{ID: "lnd-2", Alias: "carol"}, nil)
+	// state query fails: unreachable but kept
+	inspector.On("GetWalletState", mock.Anything, domain.NodeID("lnd-1")).Return(domain.WalletState(""), errors.New("down"))
+	// locked: no GetSummary
+	inspector.On("GetWalletState", mock.Anything, domain.NodeID("lnd-2")).Return(domain.WalletLocked, nil)
+	// ready but GetSummary fails: kept without alias
+	inspector.On("GetWalletState", mock.Anything, domain.NodeID("lnd-3")).Return(domain.WalletRPCActive, nil)
+	inspector.On("GetSummary", mock.Anything, domain.NodeID("lnd-3")).Return(domain.NodeSummary{}, errors.New("boom"))
 
 	nodes, err := application.NewNodeService(repo, inspector).ListNodes(context.Background())
 
 	assert.NoError(t, err)
-	assert.Equal(t, []domain.NodeSummary{{ID: "lnd-0", Alias: "alice", Color: "#fff"}, {ID: "lnd-2", Alias: "carol"}}, nodes)
+	assert.Equal(t, []domain.NodeSummary{
+		{ID: "lnd-0", Alias: "alice", Color: "#fff", WalletState: domain.WalletServerActive},
+		{ID: "lnd-1", WalletState: domain.WalletUnreachable},
+		{ID: "lnd-2", WalletState: domain.WalletLocked},
+		{ID: "lnd-3", WalletState: domain.WalletRPCActive},
+	}, nodes)
+	inspector.AssertNotCalled(t, "GetSummary", mock.Anything, domain.NodeID("lnd-1"))
+	inspector.AssertNotCalled(t, "GetSummary", mock.Anything, domain.NodeID("lnd-2"))
+	inspector.AssertNotCalled(t, "GetWalletState", mock.Anything, domain.NodeID("bad id"))
 }
 
 func TestListNodes_RepositoryError(t *testing.T) {

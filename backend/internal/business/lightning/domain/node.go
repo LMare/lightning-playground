@@ -35,6 +35,8 @@ type NodeSummary struct {
 	ID    NodeID
 	Alias string
 	Color string
+	// WalletState is the wallet lifecycle state of the node.
+	WalletState WalletState
 }
 
 // NodeInfo is the detailed state of a node.
