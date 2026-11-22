@@ -4,6 +4,10 @@ services:
   backend:
     image: LMare/lightning-playground-backend:${APP_VERSION}
     hostname: backend
+    depends_on:
+      - postgres
+    environment:
+      POSTGRES_DSN: postgres://appuser:apppassword@postgres:5432/appdb?sslmode=disable
     volumes:
       - lnd-0_data:/app/node-storage/lnd-0
       - lnd-1_data:/app/node-storage/lnd-1
@@ -13,6 +17,16 @@ services:
     hostname: frontend
     ports:
       - "${FRONTEND_PORT}:${FRONTEND_PORT}"
+
+  postgres:
+    image: postgres:${POSTGRES_TAG}
+    hostname: postgres
+    environment:
+      POSTGRES_USER: appuser
+      POSTGRES_PASSWORD: apppassword
+      POSTGRES_DB: appdb
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
 
   btcd:
     image: btcsuite/btcd:${BTCD_VERSION}
@@ -99,6 +113,7 @@ services:
       - tower_data:/root/.lnd
 
 volumes:
+  postgres_data:
   btcd_data:
   lnd-0_data:
   lnd-1_data:

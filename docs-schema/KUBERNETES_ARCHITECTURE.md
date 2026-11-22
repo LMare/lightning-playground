@@ -408,7 +408,7 @@ replicas: 3  # Plusieurs instances peuvent être déployées
 # Accéder au frontend (HTTP)
 kubectl port-forward service/frontend 8000:8000 -n lightning-playground
 
-# Accéder au backend (gRPC)
+# Accéder au backend (HTTP)
 kubectl port-forward service/backend 8080:8080 -n lightning-playground
 ```
 

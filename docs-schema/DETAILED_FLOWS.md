@@ -202,20 +202,21 @@ Penalty tx confirms first
 │                    USER LAYER                            │
 │              (Frontend Browser)                          │
 └─────────────────────────┬────────────────────────────────┘
-                          │ HTTP/REST
-                          │ (JSON payloads)
+                          │ HTTP
+                          │ (JSON ou fragments HTMX)
                           ▼
 ┌──────────────────────────────────────────────────────────┐
 │                   APPLICATION LAYER                      │
 │                    (Go Backend)                          │
 │                                                           │
 │  ┌──────────────────────────────────────────────────┐  │
-│  │ Handler Functions:                               │  │
-│  │ • lightningHandler.GetNodeInfo()                │  │
-│  │ • lightningHandler.OpenChannel()                │  │
-│  │ • routerHandler.SendPayment()                   │  │
-│  │ • userHandler.GetUser()                         │  │
-│  │ • streamEventHandler.SubscribePayments()        │  │
+│  │ Adaptateurs HTTP (infra/http) :                  │  │
+│  │ • GET  /lightning/nodes, /nodeInfo, /uri        │  │
+│  │ • POST /lightning/peer, /channel, /invoice      │  │
+│  │ • POST /lightning/paiment (progression en SSE)  │  │
+│  │ • PUT  /lightning/alias                         │  │
+│  │ • GET  /users, /stream-event                    │  │
+│  │ → services business/ → ports → infra/grpc/lnd   │  │
 │  └──────────────────────────────────────────────────┘  │
 └─────────┬────────────────────────────────────────────────┘
           │ gRPC with mTLS
