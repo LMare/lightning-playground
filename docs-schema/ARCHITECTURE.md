@@ -14,14 +14,14 @@
 │  ├─ CSS Styling                                         │
 │  └─ JavaScript (generic.js)                             │
 └────────────────┬────────────────────────────────────────┘
-                 │ HTTP/REST
+                 │ HTTP
                  ▼
 ┌─────────────────────────────────────────────────────────┐
-│          BACKEND (gRPC)                                 │
-│  ├─ lightningHandler (management)                       │
-│  ├─ routerHandler (payment routing)                     │
-│  ├─ userHandler (user management)                       │
-│  └─ streamEventHandler (real-time events)               │
+│          BACKEND (HTTP, Go)                             │
+│  ├─ http/lightning (nodes, channels, payments)          │
+│  ├─ http/user (demo users)                              │
+│  ├─ SSE (real-time payment events)                      │
+│  └─ client gRPC vers LND                                │
 └────────────────┬────────────────────────────────────────┘
                  │
         ┌────────┴─────────┐
@@ -54,13 +54,14 @@
 - Communique avec le Backend via gRPC
 
 ### 2. **Backend**
-- Serveur d'application Go
-- Service handlers:
-  - `lightningHandler`: Gestion des nœuds Lightning
-  - `routerHandler`: Routage des paiements
-  - `userHandler`: Gestion utilisateurs
-  - `streamEventHandler`: Events en temps réel
-- Expose gRPC pour communication interne
+- Serveur d'application Go, architecture hexagonale (voir [BACKEND_ARCHITECTURE.md](BACKEND_ARCHITECTURE.md))
+- Expose une API HTTP (JSON, ou fragments HTML si la requête vient de HTMX) et un flux SSE (`/stream-event`)
+- Parle gRPC (avec macaroon + TLS) aux nœuds LND ; il n'expose pas de gRPC
+- Persiste les utilisateurs de démonstration dans PostgreSQL (migrations au démarrage)
+
+### 2 bis. **PostgreSQL**
+- Table `users` (données de démo), accessible uniquement par le backend
+- Kubernetes : chart Bitnami (`make deploy-postgres`) ; Docker Compose : service `postgres`
 
 ### 3. **Bitcoin Network (BTCD)**
 - Implémentation blockchain Bitcoin (simnet)

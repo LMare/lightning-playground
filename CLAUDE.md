@@ -47,7 +47,7 @@ Backend (`backend/internal/`) is hexagonal, split in `business/` and `infra/` (r
 
 Errors: `exception.NewError(msg, cause)` returns an `*AppError` carrying file:line and the cause chain (works with `errors.Is/As`; `common.LogException` prints the chain). Business validation errors are plain sentinels in `domain` (`errors.Is`).
 
-Open items: `infra/sse` uses a single hard-coded session id (`"uniqueSession"`); `docs-schema/` describes the pre-hexagonal layout.
+Open items: `infra/sse` uses a single hard-coded session id (`"uniqueSession"`).
 
 Testing: unit tests per layer (domain, application with mocked ports, `infra/grpc/lnd` with `testsupport.GrpcClientFactoryMock`) plus `integration/` tests through the real router (`NewTestHarness` exposes `MockUserRepo`, `MockNodeRepo`, `GrpcFactory.Lightning/Router` testify mocks of the LND clients). Prefer integration tests that cross the most layers. `go test -race` currently reports a pre-existing data race in `infra/sse` (`TestSessionStart`).
 
@@ -57,6 +57,6 @@ Only the `users` table exists (demo data): `migrations/0001_create_user_table.{u
 
 ## Docs
 
-`docs-schema/` holds the human-written architecture docs (ARCHITECTURE.md, DETAILED_FLOWS.md, KUBERNETES_ARCHITECTURE.md + Mermaid sources). They predate the hexagonal refactor. `HowTo.md` has misc setup notes (gRPC client generation, btcd image, lncli).
+`docs-schema/` holds the human-written architecture docs: `BACKEND_ARCHITECTURE.md` (hexagonal layout, routes, flows; up to date, keep it in sync with the code), ARCHITECTURE.md and DETAILED_FLOWS.md (system overview; backend parts updated), KUBERNETES_ARCHITECTURE.md (not reviewed against the manifests), plus Mermaid sources. `HowTo.md` has misc setup notes (gRPC client generation, btcd image, lncli).
 
 Other infra: `docker-compose.yml`, `docker-bake.hcl`, `kubernetes/` (manifests + Helm monitoring chart, Prometheus/Grafana). `docker/` is gitignored (ELT work lives on `feature/elt-pipeline`). Version is single-sourced in `version.txt`.

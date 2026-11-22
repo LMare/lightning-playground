@@ -4,9 +4,13 @@ graph TD
     end
     
     subgraph "Backend Layer"
-        BE["⚙️ Backend<br/>Go Application"]
+        BE["⚙️ Backend<br/>Go · hexagonal"]
     end
     
+    subgraph "Data"
+        PG[("🐘 PostgreSQL<br/>users (demo)")]
+    end
+
     subgraph "Lightning Network"
         LND0["⚡ LND-0<br/>P2P / gRPC<br/>Volume: lnd-0_data"]
         LND1["⚡ LND-1<br/>P2P / gRPC<br/>Volume: lnd-1_data"]
@@ -17,7 +21,8 @@ graph TD
         BTCD["🔗 BTCD<br/>RPC / P2P<br/>Simnet Blockchain<br/>Volume: btcd_data"]
     end
     
-    FE -->|HTTP/REST| BE
+    FE -->|HTTP| BE
+    BE -->|SQL| PG
     
     BE -->|gRPC:10009| LND0
     BE -->|gRPC:10009| LND1
@@ -39,3 +44,4 @@ graph TD
     class BE backend
     class LND0,LND1,TOWER lightning
     class BTCD bitcoin
+    class PG backend
