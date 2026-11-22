@@ -14,6 +14,7 @@ import (
     "io"
     "net/http"
     "strings"
+    "sync"
     "testing"
     "time"
 )
@@ -21,15 +22,38 @@ import (
 // --- Fakes for dependencies ---
 
 // fakeWriter simulates an http.ResponseWriter + Flusher
+// It is read by the test while the session goroutine writes into it, so access is guarded by a mutex.
 type fakeWriter struct {
+    mu      sync.Mutex
     buf     bytes.Buffer
     flushed bool
 }
 
 func (f *fakeWriter) Header() http.Header { return http.Header{} }
-func (f *fakeWriter) Write(b []byte) (int, error) { return f.buf.Write(b) }
-func (f *fakeWriter) WriteHeader(statusCode int)  {}
-func (f *fakeWriter) Flush()                      { f.flushed = true }
+func (f *fakeWriter) Write(b []byte) (int, error) {
+    f.mu.Lock()
+    defer f.mu.Unlock()
+    return f.buf.Write(b)
+}
+func (f *fakeWriter) WriteHeader(statusCode int) {}
+func (f *fakeWriter) Flush() {
+    f.mu.Lock()
+    defer f.mu.Unlock()
+    f.flushed = true
+}
+
+// output returns what has been written so far.
+func (f *fakeWriter) output() string {
+    f.mu.Lock()
+    defer f.mu.Unlock()
+    return f.buf.String()
+}
+
+func (f *fakeWriter) wasFlushed() bool {
+    f.mu.Lock()
+    defer f.mu.Unlock()
+    return f.flushed
+}
 
 // fakeStream simule un istream
 type fakeStream struct {
@@ -83,11 +107,11 @@ func TestSessionNotifyAll(t *testing.T) {
     msg := "hello\nworld"
     s.notifyAll(msg)
 
-    out := fw.buf.String()
+    out := fw.output()
     if !strings.Contains(out, "data: hello world") {
         t.Errorf("expected formatted message, got %q", out)
     }
-    if !fw.flushed {
+    if !fw.wasFlushed() {
         t.Errorf("expected flush to be called")
     }
 }
@@ -100,11 +124,12 @@ func TestSessionStart(t *testing.T) {
     s.start()
     s.channel <- "ping"
 
-    // give the goroutine time to process the message
-    time.Sleep(50 * time.Millisecond)
-
-    out := fw.buf.String()
-    if !strings.Contains(out, "data: ping") {
+    // wait for the goroutine to process the message
+    deadline := time.Now().Add(time.Second)
+    for !strings.Contains(fw.output(), "data: ping") && time.Now().Before(deadline) {
+        time.Sleep(5 * time.Millisecond)
+    }
+    if out := fw.output(); !strings.Contains(out, "data: ping") {
         t.Errorf("expected message 'ping', got %q", out)
     }
 }
