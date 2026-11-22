@@ -20,7 +20,7 @@ go run ./backend/cmd      # run backend locally (needs Postgres, see below; migr
 go run ./cmd/frontend
 
 docker buildx bake                 # build all images (docker-bake.hcl)
-docker compose up -d               # frontend on :3000 (no Postgres service in the compose file)
+docker compose up -d               # frontend on :3000
 make all                           # Kubernetes: bake, kind cluster, load images, postgres (helm), deploy, hosts, monitoring
 make refresh-new-version           # bump version.txt (sed across yaml/env/bake files), rebuild app images, reload, redeploy
 make check-deps                    # verify docker/kind/kubectl/buildx/helm
@@ -32,22 +32,26 @@ LND wallets must be created manually on first launch (`lncli --network=simnet cr
 
 Entrypoints: `backend/cmd` (backend binary: `main.go` + `migration.go`), and `cmd/{frontend,sidecar-backend,sidecar-btcd,sidecar-lnd}` (each its own image; sidecars live in `sidecar/` and handle file/Kubernetes concerns such as macaroon/cert sharing). `config.go` at the repo root is the shared env-driven `Config` (`.env`).
 
-Backend is organised per bounded context under `backend/internal/`, each with `domain/`, `port/` (interfaces), `application/` (services) and `adapter/` (implementations):
-- `lightning/` — LND nodes. `domain/` (NodeID with validation, NodeSummary, NodeInfo, PeerAddress, PaymentUpdate, business errors; no json tags), `port/` (outbound: `NodeRepository`, `NodeInspector`, `ChannelGateway`, `PaymentGateway`, `PaymentProgress`, `PaymentNotifier`), `application/` (`NodeService`, `ChannelService`: use cases + business validation, depend only on ports). Adapters: `adapter/grpc` (`Gateway` implements the 3 LND ports; `GrpcClientFactory`/`ConnectionResolver` build the connection from config; LND protobuf types never leave this package), `adapter/filesystem` (NodeRepository), `adapter/stream` (PaymentNotifier → SSE hub in `platform/stream`), `adapter/http` (HTMX/JSON handlers + `dto.go` which holds the json tags / template field names).
-- `user/` — demo user CRUD. `adapter/postgres`, `adapter/http`, `application`, `port`, `domain`.
+Backend (`backend/internal/`) is hexagonal, split in `business/` and `infra/` (rule: `business` never imports `infra`, `bootstrap`, `testsupport`, the LND protobuf package or root config; enforced by `archtest/architecture_test.go`):
+- `business/<context>/` with `domain/`, `port/` (outbound interfaces), `application/` (use cases, depend only on ports). Two contexts, independent from each other:
+  - `lightning` — domain: `NodeID` (validated), `NodeSummary`, `NodeInfo`, `PeerAddress`, `PaymentUpdate`, business errors (no json tags). Ports: `NodeRepository`, `NodeInspector`, `ChannelGateway`, `PaymentGateway`, `PaymentProgress`, `PaymentNotifier`. Services: `NodeService`, `ChannelService`.
+  - `user` — demo user listing (`UserRepository.FindAll`).
+- `infra/` adapters, one folder per technology:
+  - `grpc/lnd` — `Gateway` implements the 3 LND ports; `GrpcClientFactory`/`ConnectionResolver` build the connection from config. LND protobuf types never leave this package.
+  - `postgres` — `NewPostgresDB` + user repository. `filesystem` — node repository (lists node dirs under `NodeStorage`).
+  - `sse` — SSE hub (sessions) + `PaymentNotifier`.
+  - `http/{common,lightning,user}` — handlers, DTOs (`dto.go`, own the json tags) and HTMX templates. Each package embeds its own `templates/` with `go:embed` and parses them once; `common` holds the shared helpers (`Fail`, `HTMXResponse`, success/error toasts), probe/version/stream handlers.
 - `bootstrap/` — manual composition root (`InitApp`: DB → repos → factories → services → handlers → router). Takes repos/factories as inputs so tests inject mocks.
-- `httpapi/` — shared HTTP helpers (HTMX/JSON responses, `Fail`), probe/version/stream handlers.
-- `platform/` — technical infra: `postgres` (sql.DB), `stream` (SSE sessions).
-- `shared/exception` — app error types. `gRPC/` — vendored LND `.proto` + generated stubs (regenerate with `protoc --go_out=. --go-grpc_out=.`; don't hand-edit `.pb.go`).
+- `shared/exception` — app error types. `backend/gRPC/` — vendored LND `.proto` + generated stubs (regenerate with `protoc --go_out=. --go-grpc_out=.`; don't hand-edit `.pb.go`).
 - `testsupport/` + `integration/` — `NewTestHarness` assembles the real router and services with mock repos and a mock gRPC factory.
 
-Remaining hexagonal work: the `user` context is still minimal; the `business/` + `infra/` folder split is planned (not done); `templates/personView` and HTML template paths (relative to cwd, `backend/templates/`) leak into handlers, so HTMX rendering is not covered by tests.
+Open items: `shared/exception` still uses `exampleError`/`exampleDetailleError` as constructors everywhere; `infra/sse` uses a single hard-coded session id (`"uniqueSession"`); `docs-schema/` describes the pre-hexagonal layout.
 
-Testing: unit tests per layer (domain, application with mocked ports, `adapter/grpc` with `testsupport.GrpcClientFactoryMock`) plus `integration/` tests through the real router (`NewTestHarness` exposes `MockUserRepo`, `MockNodeRepo`, `GrpcFactory.Lightning/Router` testify mocks of the LND clients). Prefer integration tests that cross the most layers. `go test -race` currently reports a pre-existing data race in `platform/stream` (`TestSessionStart`).
+Testing: unit tests per layer (domain, application with mocked ports, `infra/grpc/lnd` with `testsupport.GrpcClientFactoryMock`) plus `integration/` tests through the real router (`NewTestHarness` exposes `MockUserRepo`, `MockNodeRepo`, `GrpcFactory.Lightning/Router` testify mocks of the LND clients). Prefer integration tests that cross the most layers. `go test -race` currently reports a pre-existing data race in `infra/sse` (`TestSessionStart`).
 
 ## Database (PostgreSQL)
 
-Only the `users` table exists (demo data): `migrations/0001_create_user_table.{up,down}.sql` (pgcrypto, `id UUID` default `gen_random_uuid()`, `nom`, `prenom`, `age`, `email`, 3 seed rows). Migrations use golang-migrate and run **at backend startup** (`backend/cmd/migration.go`, source `file://migrations`, so the working dir must contain `migrations/`; the backend Dockerfile copies it). Connection string: `POSTGRES_DSN` (default `postgres://user:password@localhost:5432/mydb?sslmode=disable`; `.env` points to the in-cluster Bitnami service `postgres-postgresql.lightning-playground.svc.cluster.local`, db `appdb`, user `appuser`). Postgres is deployed only on Kubernetes via `make deploy-postgres` (Helm); `docker-compose.yml` has no Postgres service.
+Only the `users` table exists (demo data): `migrations/0001_create_user_table.{up,down}.sql` (pgcrypto, `id UUID` default `gen_random_uuid()`, `nom`, `prenom`, `age`, `email`, 3 seed rows). Migrations use golang-migrate and run **at backend startup** (`backend/cmd/migration.go`, source `file://migrations`, so the working dir must contain `migrations/`; the backend Dockerfile copies it). Connection string: `POSTGRES_DSN` (default `postgres://user:password@localhost:5432/mydb?sslmode=disable`; `.env` points to the in-cluster Bitnami service `postgres-postgresql.lightning-playground.svc.cluster.local`, db `appdb`, user `appuser`). Postgres is deployed only on Kubernetes via `make deploy-postgres` (Helm); `docker-compose.yml` has its own `postgres` service (image `POSTGRES_TAG` from `.env`, same `appuser`/`apppassword`/`appdb` credentials, `POSTGRES_DSN` overridden on the backend service).
 
 ## Docs
 

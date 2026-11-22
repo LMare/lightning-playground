@@ -5,19 +5,19 @@ import (
 	"net/http"
 
 	config "github.com/Lmare/lightning-playground"
-	"github.com/Lmare/lightning-playground/backend/internal/httpapi"
-	"github.com/Lmare/lightning-playground/backend/internal/lightning/adapter/filesystem"
-	lndgrpc "github.com/Lmare/lightning-playground/backend/internal/lightning/adapter/grpc"
-	lightninghttp "github.com/Lmare/lightning-playground/backend/internal/lightning/adapter/http"
-	lightningstream "github.com/Lmare/lightning-playground/backend/internal/lightning/adapter/stream"
-	lightningapp "github.com/Lmare/lightning-playground/backend/internal/lightning/application"
-	"github.com/Lmare/lightning-playground/backend/internal/lightning/port"
-	"github.com/Lmare/lightning-playground/backend/internal/platform/postgres"
+	lightningapp "github.com/Lmare/lightning-playground/backend/internal/business/lightning/application"
+	"github.com/Lmare/lightning-playground/backend/internal/business/lightning/port"
+	userapp "github.com/Lmare/lightning-playground/backend/internal/business/user/application"
+	userport "github.com/Lmare/lightning-playground/backend/internal/business/user/port"
+	"github.com/Lmare/lightning-playground/backend/internal/infra/filesystem"
+	lnd "github.com/Lmare/lightning-playground/backend/internal/infra/grpc/lnd"
+	"github.com/Lmare/lightning-playground/backend/internal/infra/http/common"
+	lightninghttp "github.com/Lmare/lightning-playground/backend/internal/infra/http/lightning"
+	userhttp "github.com/Lmare/lightning-playground/backend/internal/infra/http/user"
+	"github.com/Lmare/lightning-playground/backend/internal/infra/postgres"
+	userpostgres "github.com/Lmare/lightning-playground/backend/internal/infra/postgres"
+	sse "github.com/Lmare/lightning-playground/backend/internal/infra/sse"
 	exception "github.com/Lmare/lightning-playground/backend/internal/shared/exception"
-	userhttp "github.com/Lmare/lightning-playground/backend/internal/user/adapter/http"
-	userpostgres "github.com/Lmare/lightning-playground/backend/internal/user/adapter/postgres"
-	userapp "github.com/Lmare/lightning-playground/backend/internal/user/application"
-	userport "github.com/Lmare/lightning-playground/backend/internal/user/port"
 )
 
 // Repositories groups outbound ports wired for the application.
@@ -28,7 +28,7 @@ type Repositories struct {
 
 // Factories groups technical factories (e.g. LND gRPC).
 type Factories struct {
-	GrpcClientFactory lndgrpc.GrpcClientFactory
+	GrpcClientFactory lnd.GrpcClientFactory
 }
 
 type services struct {
@@ -40,9 +40,9 @@ type services struct {
 type handlers struct {
 	user        *userhttp.Handler
 	lightning   *lightninghttp.Handler
-	probe       *httpapi.ProbeHandler
-	version     *httpapi.VersionHandler
-	streamEvent *httpapi.StreamHandler
+	probe       *common.ProbeHandler
+	version     *common.VersionHandler
+	streamEvent *common.StreamHandler
 }
 
 // ------------------- Initialization functions -------------------
@@ -63,17 +63,17 @@ func InitRepositories(db *sql.DB, conf *config.Config) *Repositories {
 // InitFactories builds shared factories.
 func InitFactories() *Factories {
 	return &Factories{
-		GrpcClientFactory: lndgrpc.NewGrpcClientFactory(),
+		GrpcClientFactory: lnd.NewGrpcClientFactory(),
 	}
 }
 
 // InitServices wires the application layer and LND services.
 func InitServices(r *Repositories, f *Factories, conf *config.Config) *services {
-	lnd := lndgrpc.NewGateway(f.GrpcClientFactory, lndgrpc.NewConfigConnectionResolver(conf))
+	lnd := lnd.NewGateway(f.GrpcClientFactory, lnd.NewConfigConnectionResolver(conf))
 	return &services{
 		user:    userapp.NewUserService(r.User),
 		node:    lightningapp.NewNodeService(r.Node, lnd),
-		channel: lightningapp.NewChannelService(lnd, lnd, lightningstream.NewPaymentNotifier()),
+		channel: lightningapp.NewChannelService(lnd, lnd, sse.NewPaymentNotifier()),
 	}
 }
 
@@ -82,9 +82,9 @@ func InitHandlers(s *services, conf *config.Config) *handlers {
 	return &handlers{
 		user:        userhttp.NewHandler(s.user),
 		lightning:   lightninghttp.NewHandler(s.node, s.channel),
-		probe:       httpapi.NewProbeHandler(),
-		version:     httpapi.NewVersionHandler(conf.Version),
-		streamEvent: httpapi.NewStreamHandler(),
+		probe:       common.NewProbeHandler(),
+		version:     common.NewVersionHandler(conf.Version),
+		streamEvent: common.NewStreamHandler(),
 	}
 }
 

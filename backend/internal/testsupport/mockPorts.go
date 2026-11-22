@@ -3,8 +3,8 @@ package testsupport
 import (
 	"context"
 
-	"github.com/Lmare/lightning-playground/backend/internal/lightning/domain"
-	"github.com/Lmare/lightning-playground/backend/internal/lightning/port"
+	"github.com/Lmare/lightning-playground/backend/internal/business/lightning/domain"
+	"github.com/Lmare/lightning-playground/backend/internal/business/lightning/port"
 	"github.com/stretchr/testify/mock"
 )
 

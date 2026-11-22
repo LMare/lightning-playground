@@ -6,7 +6,7 @@ import (
 
 	lnrpc "github.com/Lmare/lightning-playground/backend/gRPC/github.com/lightningnetwork/lnd/lnrpc"
 	routerrpc "github.com/Lmare/lightning-playground/backend/gRPC/github.com/lightningnetwork/lnd/lnrpc/routerrpc"
-	lndgrpc "github.com/Lmare/lightning-playground/backend/internal/lightning/adapter/grpc"
+	lnd "github.com/Lmare/lightning-playground/backend/internal/infra/grpc/lnd"
 	"github.com/stretchr/testify/mock"
 	"google.golang.org/grpc"
 )
@@ -93,7 +93,7 @@ type GrpcClientFactoryMock struct {
 	Lightning *MockLightningClient
 	Router    *MockRouterClient
 	// Connections records the connection info requested by the gateway.
-	Connections []lndgrpc.NodeConnection
+	Connections []lnd.NodeConnection
 	// Err makes NewClient fail when set.
 	Err error
 }
@@ -102,7 +102,7 @@ func NewGrpcClientFactoryMock() *GrpcClientFactoryMock {
 	return &GrpcClientFactoryMock{Lightning: &MockLightningClient{}, Router: &MockRouterClient{}}
 }
 
-func (f *GrpcClientFactoryMock) NewClient(conn lndgrpc.NodeConnection) (lndgrpc.GrpcClient, error) {
+func (f *GrpcClientFactoryMock) NewClient(conn lnd.NodeConnection) (lnd.GrpcClient, error) {
 	f.Connections = append(f.Connections, conn)
 	if f.Err != nil {
 		return nil, f.Err
@@ -119,4 +119,4 @@ func (c *mockClient) GetLightningClient() lnrpc.LightningClient { return c.light
 func (c *mockClient) GetRouterClient() routerrpc.RouterClient   { return c.router }
 func (c *mockClient) Close() error                              { return nil }
 
-var _ lndgrpc.GrpcClientFactory = (*GrpcClientFactoryMock)(nil)
+var _ lnd.GrpcClientFactory = (*GrpcClientFactoryMock)(nil)

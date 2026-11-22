@@ -1,14 +1,13 @@
 package integration
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	"github.com/Lmare/lightning-playground/backend/internal/business/user/domain"
 	"github.com/Lmare/lightning-playground/backend/internal/testsupport"
-	"github.com/Lmare/lightning-playground/backend/internal/user/domain"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -25,9 +24,9 @@ func TestListUsers_JSON(t *testing.T) {
 	h.Router.ServeHTTP(rr, httptest.NewRequest(http.MethodGet, "/users", nil))
 
 	assert.Equal(t, http.StatusOK, rr.Code)
-	var got []domain.UserModel
-	assert.NoError(t, json.Unmarshal(rr.Body.Bytes(), &got))
-	assert.Equal(t, users, got)
+	assert.JSONEq(t, `[
+		{"id":"1","nom":"Doe","prenom":"John","age":30,"email":"john.doe@example.com"},
+		{"id":"2","nom":"Smith","prenom":"Jane","age":25,"email":"jane.smith@example.com"}]`, rr.Body.String())
 	h.MockUserRepo.AssertExpectations(t)
 }
 

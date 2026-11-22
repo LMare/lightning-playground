@@ -23,7 +23,6 @@ FROM scratch AS builder
 WORKDIR /app
 COPY --from=compiler /app/app-backend ./
 COPY .env ./
-COPY backend/templates ./backend/templates/
 COPY migrations migrations/
 
 # 3. Construction de l'image finale (alpine ou scratch)
