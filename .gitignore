@@ -3,3 +3,4 @@ pkg
 .vscode/
 cover.out
 kubernetes/helm/monitoring/charts/
+*.test
