@@ -29,6 +29,7 @@ type GrpcClientFactory interface {
 type GrpcClient interface {
 	GetLightningClient() lnrpc.LightningClient
 	GetRouterClient() routerrpc.RouterClient
+	GetStateClient() lnrpc.StateClient
 	Close() error
 }
 
@@ -48,6 +49,7 @@ func (f *grpcClientFactoryImpl) NewClient(dataClient NodeConnection) (GrpcClient
 	return &grpcClientImpl{
 		lightningClient: lnrpc.NewLightningClient(conn),
 		routerClient:    routerrpc.NewRouterClient(conn),
+		stateClient:     lnrpc.NewStateClient(conn),
 		conn:            conn,
 	}, nil
 }
@@ -111,6 +113,7 @@ func newMacaroonCreds(macaroonHex string) credentials.PerRPCCredentials {
 type grpcClientImpl struct {
 	lightningClient lnrpc.LightningClient
 	routerClient    routerrpc.RouterClient
+	stateClient     lnrpc.StateClient
 	conn            *grpc.ClientConn
 }
 
@@ -122,6 +125,11 @@ func (f *grpcClientImpl) GetLightningClient() lnrpc.LightningClient {
 // GetRouterClient returns the Router RPC client.
 func (f *grpcClientImpl) GetRouterClient() routerrpc.RouterClient {
 	return f.routerClient
+}
+
+// GetStateClient returns the State RPC client.
+func (f *grpcClientImpl) GetStateClient() lnrpc.StateClient {
+	return f.stateClient
 }
 
 // Close the gRPC connection

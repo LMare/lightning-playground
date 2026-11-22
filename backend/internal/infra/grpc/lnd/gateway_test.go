@@ -146,3 +146,49 @@ func TestPayInvoice_FeeEstimationFallback(t *testing.T) {
 
 	assert.NoError(t, err)
 }
+
+func TestGetWalletState_MapsEveryLndState(t *testing.T) {
+	tests := []struct {
+		in   lnrpc.WalletState
+		want domain.WalletState
+	}{
+		{lnrpc.WalletState_NON_EXISTING, domain.WalletNonExisting},
+		{lnrpc.WalletState_LOCKED, domain.WalletLocked},
+		{lnrpc.WalletState_UNLOCKED, domain.WalletUnlocked},
+		{lnrpc.WalletState_RPC_ACTIVE, domain.WalletRPCActive},
+		{lnrpc.WalletState_SERVER_ACTIVE, domain.WalletServerActive},
+		{lnrpc.WalletState_WAITING_TO_START, domain.WalletWaitingToStart},
+		{lnrpc.WalletState(42), domain.WalletUnknown},
+	}
+	for _, tt := range tests {
+		t.Run(string(tt.want), func(t *testing.T) {
+			gw, factory := newGateway()
+			factory.State.On("GetState", mock.Anything, mock.Anything).Return(&lnrpc.GetStateResponse{State: tt.in}, nil)
+
+			state, err := gw.GetWalletState(context.Background(), "lnd-0")
+
+			assert.NoError(t, err)
+			assert.Equal(t, tt.want, state)
+			assert.Equal(t, "lnd-0.lnd.test:10009", factory.Connections[0].Address)
+		})
+	}
+}
+
+func TestGetWalletState_GetStateError(t *testing.T) {
+	gw, factory := newGateway()
+	factory.State.On("GetState", mock.Anything, mock.Anything).Return(nil, errors.New("unavailable"))
+
+	_, err := gw.GetWalletState(context.Background(), "lnd-0")
+
+	assert.Error(t, err)
+}
+
+func TestGetWalletState_FactoryError(t *testing.T) {
+	gw, factory := newGateway()
+	factory.Err = errors.New("no macaroon")
+
+	_, err := gw.GetWalletState(context.Background(), "lnd-0")
+
+	assert.Error(t, err)
+	factory.State.AssertNotCalled(t, "GetState", mock.Anything, mock.Anything)
+}

@@ -8,6 +8,7 @@
 				<thead>
 					<th scope="col" id="id">Id</th>
 					<th scope="col" id="alias">Alias</th>
+					<th scope="col" id="wallet">Wallet</th>
 				</thead>
 				<tbody
 					id="table-nodes-body"
@@ -18,14 +19,14 @@
 					hx-target="this"
 					hx-swap="innerHTML"
 					hx-on='htmx:afterSwap:
-						enrichRgaaTableRows(this, ["id", "alias"]);
+						enrichRgaaTableRows(this, ["id", "alias", "wallet"]);
 						if (this.dataset.selected) {
 							const row = document.querySelector("#table-nodes-body tr[data-id=\"" + this.dataset.selected + "\"]");
 							if (row) row.click();
 					   }'>
 
 					<tr>
-						<td colspan="2">Chargement en cours...</td>
+						<td colspan="3">Chargement en cours...</td>
 					</tr>
 				</tbody>
 			</table>

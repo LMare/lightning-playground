@@ -12,6 +12,8 @@ import (
 	"github.com/Lmare/lightning-playground/backend/internal/testsupport"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 func do(h *testsupport.TestHarness, method, path string, form url.Values) *httptest.ResponseRecorder {
@@ -27,16 +29,130 @@ func do(h *testsupport.TestHarness, method, path string, form url.Values) *httpt
 	return rr
 }
 
+func stateResp(s lnrpc.WalletState) *lnrpc.GetStateResponse {
+	return &lnrpc.GetStateResponse{State: s}
+}
+
 func TestListNodes_JSON(t *testing.T) {
 	h := testsupport.NewTestHarness()
 	h.MockNodeRepo.On("GetNodesIds").Return([]string{"lnd-0"}, nil)
+	h.GrpcFactory.State.On("GetState", mock.Anything, mock.Anything).Return(stateResp(lnrpc.WalletState_SERVER_ACTIVE), nil)
 	h.GrpcFactory.Lightning.On("GetInfo", mock.Anything, mock.Anything).Return(&lnrpc.GetInfoResponse{Alias: "alice", Color: "#ff0000"}, nil)
 
 	rr := do(h, http.MethodGet, "/lightning/nodes", nil)
 
 	assert.Equal(t, http.StatusOK, rr.Code)
-	assert.JSONEq(t, `[{"id":"lnd-0","alias":"alice","color":"#ff0000"}]`, rr.Body.String())
+	assert.JSONEq(t, `[{"id":"lnd-0","alias":"alice","color":"#ff0000","walletState":"server_active","walletLabel":"Unlocked"}]`, rr.Body.String())
 	assert.Equal(t, "lnd-0.lnd.test:10009", h.GrpcFactory.Connections[0].Address)
+}
+
+func TestListNodes_LockedNodeIsListedWithoutGetInfo(t *testing.T) {
+	h := testsupport.NewTestHarness()
+	h.MockNodeRepo.On("GetNodesIds").Return([]string{"lnd-0"}, nil)
+	h.GrpcFactory.State.On("GetState", mock.Anything, mock.Anything).Return(stateResp(lnrpc.WalletState_LOCKED), nil)
+
+	rr := do(h, http.MethodGet, "/lightning/nodes", nil)
+
+	assert.Equal(t, http.StatusOK, rr.Code)
+	assert.JSONEq(t, `[{"id":"lnd-0","alias":"","color":"","walletState":"locked","walletLabel":"Locked"}]`, rr.Body.String())
+	h.GrpcFactory.Lightning.AssertNotCalled(t, "GetInfo", mock.Anything, mock.Anything)
+}
+
+func TestListNodes_StartingStates(t *testing.T) {
+	tests := []struct {
+		state       lnrpc.WalletState
+		wantState   string
+		getInfoCall bool
+	}{
+		{lnrpc.WalletState_UNLOCKED, "unlocked", false},
+		{lnrpc.WalletState_WAITING_TO_START, "waiting_to_start", false},
+		{lnrpc.WalletState_RPC_ACTIVE, "rpc_active", true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.wantState, func(t *testing.T) {
+			h := testsupport.NewTestHarness()
+			h.MockNodeRepo.On("GetNodesIds").Return([]string{"lnd-0"}, nil)
+			h.GrpcFactory.State.On("GetState", mock.Anything, mock.Anything).Return(stateResp(tt.state), nil)
+			h.GrpcFactory.Lightning.On("GetInfo", mock.Anything, mock.Anything).Return(&lnrpc.GetInfoResponse{}, nil)
+
+			rr := do(h, http.MethodGet, "/lightning/nodes", nil)
+
+			assert.Equal(t, http.StatusOK, rr.Code)
+			var got []map[string]any
+			assert.NoError(t, json.Unmarshal(rr.Body.Bytes(), &got))
+			if assert.Len(t, got, 1) {
+				assert.Equal(t, tt.wantState, got[0]["walletState"])
+				assert.Equal(t, "Starting", got[0]["walletLabel"])
+			}
+			if tt.getInfoCall {
+				h.GrpcFactory.Lightning.AssertCalled(t, "GetInfo", mock.Anything, mock.Anything)
+			} else {
+				h.GrpcFactory.Lightning.AssertNotCalled(t, "GetInfo", mock.Anything, mock.Anything)
+			}
+		})
+	}
+}
+
+func TestListNodes_UnreachableWhenDialFails(t *testing.T) {
+	h := testsupport.NewTestHarness()
+	h.MockNodeRepo.On("GetNodesIds").Return([]string{"lnd-0"}, nil)
+	h.GrpcFactory.Err = assert.AnError
+
+	rr := do(h, http.MethodGet, "/lightning/nodes", nil)
+
+	assert.Equal(t, http.StatusOK, rr.Code)
+	assert.JSONEq(t, `[{"id":"lnd-0","alias":"","color":"","walletState":"unreachable","walletLabel":"Unreachable"}]`, rr.Body.String())
+}
+
+func TestListNodes_UnreachableWhenGetStateFails(t *testing.T) {
+	h := testsupport.NewTestHarness()
+	h.MockNodeRepo.On("GetNodesIds").Return([]string{"lnd-0"}, nil)
+	h.GrpcFactory.State.On("GetState", mock.Anything, mock.Anything).Return(nil, status.Error(codes.Unavailable, "down"))
+
+	rr := do(h, http.MethodGet, "/lightning/nodes", nil)
+
+	assert.Equal(t, http.StatusOK, rr.Code)
+	assert.JSONEq(t, `[{"id":"lnd-0","alias":"","color":"","walletState":"unreachable","walletLabel":"Unreachable"}]`, rr.Body.String())
+}
+
+func TestListNodes_ReadyButGetInfoFailsKeepsTheNode(t *testing.T) {
+	h := testsupport.NewTestHarness()
+	h.MockNodeRepo.On("GetNodesIds").Return([]string{"lnd-0"}, nil)
+	h.GrpcFactory.State.On("GetState", mock.Anything, mock.Anything).Return(stateResp(lnrpc.WalletState_SERVER_ACTIVE), nil)
+	h.GrpcFactory.Lightning.On("GetInfo", mock.Anything, mock.Anything).Return(nil, assert.AnError)
+
+	rr := do(h, http.MethodGet, "/lightning/nodes", nil)
+
+	assert.Equal(t, http.StatusOK, rr.Code)
+	assert.JSONEq(t, `[{"id":"lnd-0","alias":"","color":"","walletState":"server_active","walletLabel":"Unlocked"}]`, rr.Body.String())
+}
+
+func TestListNodes_MixedStatesKeepRepositoryOrder(t *testing.T) {
+	h := testsupport.NewTestHarness()
+	h.MockNodeRepo.On("GetNodesIds").Return([]string{"lnd-0", "lnd-1"}, nil)
+	locked := &testsupport.MockStateClient{}
+	locked.On("GetState", mock.Anything, mock.Anything).Return(stateResp(lnrpc.WalletState_LOCKED), nil)
+	h.GrpcFactory.State.On("GetState", mock.Anything, mock.Anything).Return(stateResp(lnrpc.WalletState_SERVER_ACTIVE), nil)
+	h.GrpcFactory.StateByAddress = map[string]*testsupport.MockStateClient{"lnd-1.lnd.test:10009": locked}
+	h.GrpcFactory.Lightning.On("GetInfo", mock.Anything, mock.Anything).Return(&lnrpc.GetInfoResponse{Alias: "alice", Color: "#ff0000"}, nil)
+
+	rr := do(h, http.MethodGet, "/lightning/nodes", nil)
+
+	assert.Equal(t, http.StatusOK, rr.Code)
+	assert.JSONEq(t, `[
+		{"id":"lnd-0","alias":"alice","color":"#ff0000","walletState":"server_active","walletLabel":"Unlocked"},
+		{"id":"lnd-1","alias":"","color":"","walletState":"locked","walletLabel":"Locked"}]`, rr.Body.String())
+}
+
+func TestListNodes_InvalidIdIsStillSkipped(t *testing.T) {
+	h := testsupport.NewTestHarness()
+	h.MockNodeRepo.On("GetNodesIds").Return([]string{"bad id", "lnd-0"}, nil)
+	h.GrpcFactory.State.On("GetState", mock.Anything, mock.Anything).Return(stateResp(lnrpc.WalletState_LOCKED), nil)
+
+	rr := do(h, http.MethodGet, "/lightning/nodes", nil)
+
+	assert.Equal(t, http.StatusOK, rr.Code)
+	assert.JSONEq(t, `[{"id":"lnd-0","alias":"","color":"","walletState":"locked","walletLabel":"Locked"}]`, rr.Body.String())
 }
 
 func TestNodeInfoAndURI_JSON(t *testing.T) {

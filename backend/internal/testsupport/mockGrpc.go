@@ -54,6 +54,18 @@ func (m *MockLightningClient) SetColor(ctx context.Context, in *lnrpc.SetColorRe
 	return resp, args.Error(1)
 }
 
+// MockStateClient mocks the LND State service.
+type MockStateClient struct {
+	lnrpc.StateClient
+	mock.Mock
+}
+
+func (m *MockStateClient) GetState(ctx context.Context, in *lnrpc.GetStateRequest, _ ...grpc.CallOption) (*lnrpc.GetStateResponse, error) {
+	args := m.Called(ctx, in)
+	resp, _ := args.Get(0).(*lnrpc.GetStateResponse)
+	return resp, args.Error(1)
+}
+
 // MockRouterClient mocks the LND Router service.
 type MockRouterClient struct {
 	routerrpc.RouterClient
@@ -92,6 +104,10 @@ func (s *PaymentStream) Recv() (*lnrpc.Payment, error) {
 type GrpcClientFactoryMock struct {
 	Lightning *MockLightningClient
 	Router    *MockRouterClient
+	// State is the default State service mock.
+	State *MockStateClient
+	// StateByAddress overrides State for a given node address (e.g. "lnd-1.lnd.test:10009").
+	StateByAddress map[string]*MockStateClient
 	// Connections records the connection info requested by the gateway.
 	Connections []lnd.NodeConnection
 	// Err makes NewClient fail when set.
@@ -99,7 +115,7 @@ type GrpcClientFactoryMock struct {
 }
 
 func NewGrpcClientFactoryMock() *GrpcClientFactoryMock {
-	return &GrpcClientFactoryMock{Lightning: &MockLightningClient{}, Router: &MockRouterClient{}}
+	return &GrpcClientFactoryMock{Lightning: &MockLightningClient{}, Router: &MockRouterClient{}, State: &MockStateClient{}}
 }
 
 func (f *GrpcClientFactoryMock) NewClient(conn lnd.NodeConnection) (lnd.GrpcClient, error) {
@@ -107,16 +123,22 @@ func (f *GrpcClientFactoryMock) NewClient(conn lnd.NodeConnection) (lnd.GrpcClie
 	if f.Err != nil {
 		return nil, f.Err
 	}
-	return &mockClient{lightning: f.Lightning, router: f.Router}, nil
+	var state lnrpc.StateClient = f.State
+	if st, ok := f.StateByAddress[conn.Address]; ok {
+		state = st
+	}
+	return &mockClient{lightning: f.Lightning, router: f.Router, state: state}, nil
 }
 
 type mockClient struct {
 	lightning lnrpc.LightningClient
 	router    routerrpc.RouterClient
+	state     lnrpc.StateClient
 }
 
 func (c *mockClient) GetLightningClient() lnrpc.LightningClient { return c.lightning }
 func (c *mockClient) GetRouterClient() routerrpc.RouterClient   { return c.router }
+func (c *mockClient) GetStateClient() lnrpc.StateClient         { return c.state }
 func (c *mockClient) Close() error                              { return nil }
 
 var _ lnd.GrpcClientFactory = (*GrpcClientFactoryMock)(nil)

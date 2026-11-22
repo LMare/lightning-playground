@@ -78,8 +78,8 @@ backend/
 
 | Couche | Contenu |
 |--------|---------|
-| `domain` | `NodeID` (validé : lettres, chiffres, `_`, `-`), `NodeSummary`, `NodeInfo`, `PeerAddress` (`pubkey@host`), `PaymentUpdate`, erreurs métier (`ErrInvalidNodeID`, `ErrInvalidPeerAddress`, `ErrInvalidAmount`) |
-| `port` (sortants) | `NodeRepository`, `NodeInspector`, `ChannelGateway`, `PaymentGateway`, `PaymentProgress`, `PaymentNotifier` |
+| `domain` | `NodeID` (validé : lettres, chiffres, `_`, `-`), `NodeSummary` (avec `WalletState`), `NodeInfo`, `PeerAddress` (`pubkey@host`), `PaymentUpdate`, `WalletState` (`IsReady` : `rpc_active` et `server_active`), erreurs métier (`ErrInvalidNodeID`, `ErrInvalidPeerAddress`, `ErrInvalidAmount`) |
+| `port` (sortants) | `NodeRepository`, `NodeInspector` (`GetSummary`, `GetWalletState`, `GetInfo`, `UpdateAppearance`), `ChannelGateway`, `PaymentGateway`, `PaymentProgress`, `PaymentNotifier` |
 | `application` | `NodeService` (lister, infos, URI, alias/couleur), `ChannelService` (peer, canal, facture, paiement) |
 | adaptateurs | `grpc/lnd.Gateway` implémente `NodeInspector` + `ChannelGateway` + `PaymentGateway` ; `filesystem` → `NodeRepository` ; `sse.PaymentNotifier` → `PaymentNotifier` ; `http/lightning` appelle les services |
 
@@ -94,7 +94,7 @@ Les handlers répondent en HTML (fragments HTMX) si l'en-tête `HX-Request: true
 
 | Route | Méthode | Cas d'usage |
 |-------|---------|-------------|
-| `/lightning/nodes` | GET | liste des nœuds joignables |
+| `/lightning/nodes` | GET | liste de tous les nœuds avec l'état de leur wallet (`walletState`, libellé `walletLabel`) |
 | `/lightning/nodeInfo?id=` | GET | état d'un nœud |
 | `/lightning/uri?id=` | GET | première URI publique du nœud |
 | `/lightning/peer` | POST | connecter un peer (`id`, `uri`) |
@@ -105,6 +105,19 @@ Les handlers répondent en HTML (fragments HTMX) si l'en-tête `HX-Request: true
 | `/users` | GET | liste des utilisateurs (démo) |
 | `/stream-event` | GET | flux SSE (notifications de paiement) |
 | `/health`, `/ready`, `/version`, `/metrics` | GET | sondes, version, métriques Prometheus |
+
+## Exemple de flux : liste des nœuds
+```
+GET /lightning/nodes
+  → http/lightning.HandleListOfNodes        (JSON, ou fragment HTMX si HX-Request)
+  → application.NodeService.ListNodes       ids lus par le NodeRepository (filesystem)
+  → grpc/lnd.Gateway.GetWalletState         lnrpc.State/GetState (pas besoin de GetInfo)
+      erreur (dial, macaroon, RPC)          → state "unreachable", le nœud est tout de même listé
+  → grpc/lnd.Gateway.GetSummary             GetInfo (alias, couleur), seulement si rpc_active ou server_active
+      erreur                                → nœud gardé, sans alias ni couleur
+  ← walletState (valeur brute) + walletLabel (Unlocked / Starting / Locked / No wallet / Unreachable / Unknown)
+```
+Limite connue : un nœud sans wallet créé n'a pas de `admin.macaroon`, donc la connexion échoue et le nœud apparaît `Unreachable` ; en pratique le libellé `No wallet` n'est donc pas atteint.
 
 ## Exemple de flux : paiement d'une facture
 ```

@@ -16,6 +16,12 @@ func (m *MockNodeInspector) GetSummary(ctx context.Context, id domain.NodeID) (d
 	return args.Get(0).(domain.NodeSummary), args.Error(1)
 }
 
+func (m *MockNodeInspector) GetWalletState(ctx context.Context, id domain.NodeID) (domain.WalletState, error) {
+	args := m.Called(ctx, id)
+	state, _ := args.Get(0).(domain.WalletState)
+	return state, args.Error(1)
+}
+
 func (m *MockNodeInspector) GetInfo(ctx context.Context, id domain.NodeID) (domain.NodeInfo, error) {
 	args := m.Called(ctx, id)
 	return args.Get(0).(domain.NodeInfo), args.Error(1)
