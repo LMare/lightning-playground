@@ -92,7 +92,7 @@ func InitHandlers(s *services, conf *config.Config) *handlers {
 func InitApp(cfg *config.Config) (*sql.DB, http.Handler, error) {
 	db, err := InitDB(cfg)
 	if err != nil {
-		return nil, nil, exception.NewError("Failed to initialize database", err, exception.NewExampleError)
+		return nil, nil, exception.NewError("Failed to initialize database", err)
 	}
 	repos := InitRepositories(db, cfg)
 	factories := InitFactories()

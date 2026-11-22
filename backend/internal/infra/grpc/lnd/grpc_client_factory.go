@@ -41,7 +41,7 @@ type grpcClientFactoryImpl struct {
 func (f *grpcClientFactoryImpl) NewClient(dataClient NodeConnection) (GrpcClient, error) {
 	conn, err := f.createGrpcClientConn(dataClient)
 	if err != nil {
-		err := exception.NewError("Error creating gRPC communication channel", err, exception.NewExampleError)
+		err := exception.NewError("Error creating gRPC communication channel", err)
 		return nil, err
 	}
 
@@ -58,7 +58,7 @@ func (f *grpcClientFactoryImpl) createGrpcClientConn(dataClient NodeConnection) 
 	// Charger le certificat TLS
 	cert, err := os.ReadFile(dataClient.TLSCertPath)
 	if err != nil {
-		err := exception.NewError(fmt.Sprintf("Erreur lecture TLS cert : %s", dataClient.TLSCertPath), err, exception.NewExampleError)
+		err := exception.NewError(fmt.Sprintf("Erreur lecture TLS cert : %s", dataClient.TLSCertPath), err)
 		return nil, err
 	}
 	certPool := x509.NewCertPool()
@@ -68,7 +68,7 @@ func (f *grpcClientFactoryImpl) createGrpcClientConn(dataClient NodeConnection) 
 	// Load macaroon
 	macaroonBytes, err := os.ReadFile(dataClient.MacaroonPath)
 	if err != nil {
-		err := exception.NewError(fmt.Sprintf("Error reading macaroon: %s", dataClient.MacaroonPath), err, exception.NewExampleError)
+		err := exception.NewError(fmt.Sprintf("Error reading macaroon: %s", dataClient.MacaroonPath), err)
 		return nil, err
 	}
 	macaroonHex := fmt.Sprintf("%x", macaroonBytes)

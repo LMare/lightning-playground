@@ -27,7 +27,7 @@ func (n *NodeRepositoryFileSystem) GetNodesIds() ([]string, error) {
 	// read Folder of Nodes
 	entries, err := os.ReadDir(n.conf.NodeStorage)
 	if err != nil {
-		return nodeIds, exception.NewError("Error reading NodeStorage", err, exception.NewExampleError)
+		return nodeIds, exception.NewError("Error reading NodeStorage", err)
 	}
 
 	// Parcourir les entrées et filtrer uniquement les dossiers

@@ -45,7 +45,9 @@ Backend (`backend/internal/`) is hexagonal, split in `business/` and `infra/` (r
 - `shared/exception` — app error types. `backend/gRPC/` — vendored LND `.proto` + generated stubs (regenerate with `protoc --go_out=. --go-grpc_out=.`; don't hand-edit `.pb.go`).
 - `testsupport/` + `integration/` — `NewTestHarness` assembles the real router and services with mock repos and a mock gRPC factory.
 
-Open items: `shared/exception` still uses `exampleError`/`exampleDetailleError` as constructors everywhere; `infra/sse` uses a single hard-coded session id (`"uniqueSession"`); `docs-schema/` describes the pre-hexagonal layout.
+Errors: `exception.NewError(msg, cause)` returns an `*AppError` carrying file:line and the cause chain (works with `errors.Is/As`; `common.LogException` prints the chain). Business validation errors are plain sentinels in `domain` (`errors.Is`).
+
+Open items: `infra/sse` uses a single hard-coded session id (`"uniqueSession"`); `docs-schema/` describes the pre-hexagonal layout.
 
 Testing: unit tests per layer (domain, application with mocked ports, `infra/grpc/lnd` with `testsupport.GrpcClientFactoryMock`) plus `integration/` tests through the real router (`NewTestHarness` exposes `MockUserRepo`, `MockNodeRepo`, `GrpcFactory.Lightning/Router` testify mocks of the LND clients). Prefer integration tests that cross the most layers. `go test -race` currently reports a pre-existing data race in `infra/sse` (`TestSessionStart`).
 

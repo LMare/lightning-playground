@@ -33,7 +33,7 @@ func NewGateway(factory GrpcClientFactory, resolver ConnectionResolver) *Gateway
 func (g *Gateway) open(id domain.NodeID) (GrpcClient, error) {
 	client, err := g.factory.NewClient(g.resolver.Resolve(id))
 	if err != nil {
-		return nil, exception.NewError(fmt.Sprintf("Unable to open dial with Node[%s]", id), err, exception.NewExampleError)
+		return nil, exception.NewError(fmt.Sprintf("Unable to open dial with Node[%s]", id), err)
 	}
 	return client, nil
 }
@@ -83,7 +83,7 @@ func (g *Gateway) getInfo(ctx context.Context, id domain.NodeID) (*lnrpc.GetInfo
 
 	resp, err := client.GetLightningClient().GetInfo(ctx, &lnrpc.GetInfoRequest{})
 	if err != nil {
-		return nil, exception.NewError(fmt.Sprintf("Unable to getInfo of Node[%s]", id), err, exception.NewExampleError)
+		return nil, exception.NewError(fmt.Sprintf("Unable to getInfo of Node[%s]", id), err)
 	}
 	return resp, nil
 }
@@ -96,10 +96,10 @@ func (g *Gateway) UpdateAppearance(ctx context.Context, id domain.NodeID, alias,
 	defer client.Close()
 
 	if _, err = client.GetLightningClient().SetAlias(ctx, &lnrpc.SetAliasRequest{Alias: alias}); err != nil {
-		return exception.NewError("cannot change the alias", err, exception.NewExampleError)
+		return exception.NewError("cannot change the alias", err)
 	}
 	if _, err = client.GetLightningClient().SetColor(ctx, &lnrpc.SetColorRequest{Color: color}); err != nil {
-		return exception.NewError("cannot change the color", err, exception.NewExampleError)
+		return exception.NewError("cannot change the color", err)
 	}
 	return nil
 }
@@ -118,7 +118,7 @@ func (g *Gateway) AddPeer(ctx context.Context, id domain.NodeID, peer domain.Pee
 		Perm: true,
 	})
 	if err != nil {
-		return exception.NewError("Error on adding a peer", err, exception.NewExampleError)
+		return exception.NewError("Error on adding a peer", err)
 	}
 	return nil
 }
@@ -132,7 +132,7 @@ func (g *Gateway) OpenChannel(ctx context.Context, id domain.NodeID, peerPubKeyH
 
 	pubkeyBytes, err := hex.DecodeString(peerPubKeyHex)
 	if err != nil {
-		return exception.NewError("Error on decode pubkeyHex", err, exception.NewExampleError)
+		return exception.NewError("Error on decode pubkeyHex", err)
 	}
 
 	// TODO @GoodToHave use OpenChannelSync return value for UI notification piping
@@ -146,7 +146,7 @@ func (g *Gateway) OpenChannel(ctx context.Context, id domain.NodeID, peerPubKeyH
 		FeeRate:            1000, // nb sat by 1 000 000 of sat
 	})
 	if err != nil {
-		return exception.NewError("Error on opening a channel", err, exception.NewExampleError)
+		return exception.NewError("Error on opening a channel", err)
 	}
 	return nil
 }
@@ -165,7 +165,7 @@ func (g *Gateway) CreateInvoice(ctx context.Context, id domain.NodeID, memo stri
 
 	invoice, err := client.GetLightningClient().AddInvoice(ctx, &lnrpc.Invoice{Expiry: invoiceExpirySeconds, Memo: memo, Value: amountSat})
 	if err != nil {
-		return "", exception.NewError("Error on creating invoice", err, exception.NewExampleError)
+		return "", exception.NewError("Error on creating invoice", err)
 	}
 	return invoice.PaymentRequest, nil
 }
@@ -185,7 +185,7 @@ func (g *Gateway) PayInvoice(ctx context.Context, id domain.NodeID, paymentReque
 	})
 	if err != nil {
 		client.Close()
-		return nil, exception.NewError("Error on sending payment", err, exception.NewExampleError)
+		return nil, exception.NewError("Error on sending payment", err)
 	}
 	return &paymentProgress{stream: stream, client: client}, nil
 }
