@@ -18,6 +18,18 @@ type MockLightningClient struct {
 	mock.Mock
 }
 
+func (m *MockLightningClient) WalletBalance(ctx context.Context, in *lnrpc.WalletBalanceRequest, _ ...grpc.CallOption) (*lnrpc.WalletBalanceResponse, error) {
+	args := m.Called(ctx, in)
+	resp, _ := args.Get(0).(*lnrpc.WalletBalanceResponse)
+	return resp, args.Error(1)
+}
+
+func (m *MockLightningClient) ChannelBalance(ctx context.Context, in *lnrpc.ChannelBalanceRequest, _ ...grpc.CallOption) (*lnrpc.ChannelBalanceResponse, error) {
+	args := m.Called(ctx, in)
+	resp, _ := args.Get(0).(*lnrpc.ChannelBalanceResponse)
+	return resp, args.Error(1)
+}
+
 func (m *MockLightningClient) GetInfo(ctx context.Context, in *lnrpc.GetInfoRequest, _ ...grpc.CallOption) (*lnrpc.GetInfoResponse, error) {
 	args := m.Called(ctx, in)
 	resp, _ := args.Get(0).(*lnrpc.GetInfoResponse)

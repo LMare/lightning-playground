@@ -20,6 +20,8 @@ type WalletGateway interface {
 	// Unlock decrypts the wallet. It returns domain.ErrInvalidWalletPassword,
 	// domain.ErrWalletNotLocked or domain.ErrWalletNotCreated, or another error if the node is unreachable.
 	Unlock(ctx context.Context, id domain.NodeID, password []byte) error
+	// GetBalance returns the on-chain and channel balances. An error means the node could not be queried.
+	GetBalance(ctx context.Context, id domain.NodeID) (domain.Balance, error)
 }
 
 // ChannelGateway is the outbound port to connect a node to the network.

@@ -11,6 +11,8 @@ var (
 	ErrWalletNotLocked = errors.New("wallet is not locked")
 	// ErrWalletNotCreated is returned when the node has no wallet yet.
 	ErrWalletNotCreated = errors.New("wallet not created")
+	// ErrWalletNotReady is returned when the wallet cannot answer queries yet (locked, starting, ...).
+	ErrWalletNotReady = errors.New("wallet not ready")
 )
 
 // WalletState is the lifecycle state of a node's wallet, as seen by the playground.

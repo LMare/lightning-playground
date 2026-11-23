@@ -1,0 +1,22 @@
+<div class="node-balance">
+	<div>
+		<h3 class="font-semibold">On-chain</h3>
+		<p>Confirmed: <span {{satAttr "data-onchain-confirmed" .OnChain.ConfirmedSat}}>{{.OnChain.ConfirmedSat}}</span> sat</p>
+		<p>Unconfirmed: <span {{satAttr "data-onchain-unconfirmed" .OnChain.UnconfirmedSat}}>{{.OnChain.UnconfirmedSat}}</span> sat</p>
+		<p>Total: <span {{satAttr "data-onchain-total" .OnChain.TotalSat}}>{{.OnChain.TotalSat}}</span> sat</p>
+		{{if gt .OnChain.LockedSat 0}}<p>Locked: {{.OnChain.LockedSat}} sat</p>{{end}}
+		{{if gt .OnChain.ReservedAnchorSat 0}}<p>Anchor reserve: {{.OnChain.ReservedAnchorSat}} sat</p>{{end}}
+	</div>
+	<div>
+		<h3 class="font-semibold">Channels</h3>
+		<p>Local: <span data-channels-local="{{.Channels.LocalSat}}">{{.Channels.LocalSat}}</span> sat</p>
+		<p>Remote: <span data-channels-remote="{{.Channels.RemoteSat}}">{{.Channels.RemoteSat}}</span> sat</p>
+		<p>Pending open (local / remote): {{.Channels.PendingOpenLocalSat}} / {{.Channels.PendingOpenRemoteSat}} sat</p>
+		<p>Unsettled (local / remote): {{.Channels.UnsettledLocalSat}} / {{.Channels.UnsettledRemoteSat}} sat</p>
+		<p>Total local: <span data-channels-total="{{.Channels.TotalLocalSat}}">{{.Channels.TotalLocalSat}}</span> sat</p>
+	</div>
+	<div>
+		<h3 class="font-semibold">Total</h3>
+		<p><span data-total="{{.TotalSat}}">{{.TotalSat}}</span> sat</p>
+	</div>
+</div>

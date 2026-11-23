@@ -16,7 +16,7 @@ import (
 )
 
 // Gateway is the outbound adapter talking to LND nodes over gRPC.
-// It implements the NodeInspector, ChannelGateway and PaymentGateway ports.
+// It implements the NodeInspector, WalletGateway, ChannelGateway and PaymentGateway ports.
 type Gateway struct {
 	factory  GrpcClientFactory
 	resolver ConnectionResolver
@@ -411,3 +411,41 @@ func toPaymentStatus(s lnrpc.Payment_PaymentStatus) domain.PaymentStatus {
 		return domain.PaymentUnknown
 	}
 }
+
+// GetBalance reads the on-chain (WalletBalance) and channel (ChannelBalance) balances of a node.
+func (g *Gateway) GetBalance(ctx context.Context, id domain.NodeID) (domain.Balance, error) {
+	client, err := g.open(id)
+	if err != nil {
+		return domain.Balance{}, err
+	}
+	defer client.Close()
+
+	lightning := client.GetLightningClient()
+	wallet, err := lightning.WalletBalance(ctx, &lnrpc.WalletBalanceRequest{})
+	if err != nil {
+		return domain.Balance{}, exception.NewError(fmt.Sprintf("Unable to get balance of Node[%s]", id), err)
+	}
+	channels, err := lightning.ChannelBalance(ctx, &lnrpc.ChannelBalanceRequest{})
+	if err != nil {
+		return domain.Balance{}, exception.NewError(fmt.Sprintf("Unable to get balance of Node[%s]", id), err)
+	}
+	return domain.Balance{
+		OnChain: domain.OnChainBalance{
+			ConfirmedSat:      wallet.GetConfirmedBalance(),
+			UnconfirmedSat:    wallet.GetUnconfirmedBalance(),
+			LockedSat:         wallet.GetLockedBalance(),
+			ReservedAnchorSat: wallet.GetReservedBalanceAnchorChan(),
+		},
+		Channels: domain.ChannelBalance{
+			LocalSat:             satOf(channels.GetLocalBalance()),
+			RemoteSat:            satOf(channels.GetRemoteBalance()),
+			UnsettledLocalSat:    satOf(channels.GetUnsettledLocalBalance()),
+			UnsettledRemoteSat:   satOf(channels.GetUnsettledRemoteBalance()),
+			PendingOpenLocalSat:  satOf(channels.GetPendingOpenLocalBalance()),
+			PendingOpenRemoteSat: satOf(channels.GetPendingOpenRemoteBalance()),
+		},
+	}, nil
+}
+
+// satOf returns the sat value of an LND amount; nil gives 0.
+func satOf(a *lnrpc.Amount) int64 { return int64(a.GetSat()) }

@@ -123,3 +123,49 @@ func channelStatusLabel(s domain.ChannelStatus) string {
 		return "Unknown"
 	}
 }
+
+type onChainBalanceDTO struct {
+	ConfirmedSat      int64 `json:"confirmedSat"`
+	UnconfirmedSat    int64 `json:"unconfirmedSat"`
+	TotalSat          int64 `json:"totalSat"`
+	LockedSat         int64 `json:"lockedSat"`
+	ReservedAnchorSat int64 `json:"reservedAnchorSat"`
+}
+
+type channelBalanceDTO struct {
+	LocalSat             int64 `json:"localSat"`
+	RemoteSat            int64 `json:"remoteSat"`
+	PendingOpenLocalSat  int64 `json:"pendingOpenLocalSat"`
+	PendingOpenRemoteSat int64 `json:"pendingOpenRemoteSat"`
+	UnsettledLocalSat    int64 `json:"unsettledLocalSat"`
+	UnsettledRemoteSat   int64 `json:"unsettledRemoteSat"`
+	TotalLocalSat        int64 `json:"totalLocalSat"`
+}
+
+type balanceDTO struct {
+	OnChain  onChainBalanceDTO `json:"onChain"`
+	Channels channelBalanceDTO `json:"channels"`
+	TotalSat int64             `json:"totalSat"`
+}
+
+func toBalanceDTO(b domain.Balance) balanceDTO {
+	return balanceDTO{
+		OnChain: onChainBalanceDTO{
+			ConfirmedSat:      b.OnChain.ConfirmedSat,
+			UnconfirmedSat:    b.OnChain.UnconfirmedSat,
+			TotalSat:          b.OnChain.TotalSat(),
+			LockedSat:         b.OnChain.LockedSat,
+			ReservedAnchorSat: b.OnChain.ReservedAnchorSat,
+		},
+		Channels: channelBalanceDTO{
+			LocalSat:             b.Channels.LocalSat,
+			RemoteSat:            b.Channels.RemoteSat,
+			PendingOpenLocalSat:  b.Channels.PendingOpenLocalSat,
+			PendingOpenRemoteSat: b.Channels.PendingOpenRemoteSat,
+			UnsettledLocalSat:    b.Channels.UnsettledLocalSat,
+			UnsettledRemoteSat:   b.Channels.UnsettledRemoteSat,
+			TotalLocalSat:        b.Channels.TotalLocalSat(),
+		},
+		TotalSat: b.TotalSat(),
+	}
+}
