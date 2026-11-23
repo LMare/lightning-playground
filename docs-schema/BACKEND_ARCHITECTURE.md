@@ -15,7 +15,7 @@ graph LR
         subgraph LN["lightning"]
             LAPP["application<br/>NodeService · ChannelService"]
             LDOM["domain<br/>NodeID · NodeInfo · PeerAddress · PaymentUpdate"]
-            LPORT["port<br/>NodeInspector · ChannelGateway<br/>PaymentGateway · PaymentNotifier<br/>NodeRepository"]
+            LPORT["port<br/>NodeInspector · WalletGateway<br/>ChannelGateway<br/>PaymentGateway · PaymentNotifier<br/>NodeRepository"]
         end
         subgraph US["user"]
             UAPP["application<br/>UserService"]
@@ -79,9 +79,9 @@ backend/
 | Couche | Contenu |
 |--------|---------|
 | `domain` | `NodeID` (validé : lettres, chiffres, `_`, `-`), `NodeSummary` (avec `WalletState`), `NodeInfo`, `PeerAddress` (`pubkey@host`), `PaymentUpdate`, `WalletState` (`IsReady` : `rpc_active` et `server_active`), erreurs métier (`ErrInvalidNodeID`, `ErrInvalidPeerAddress`, `ErrInvalidAmount`) |
-| `port` (sortants) | `NodeRepository`, `NodeInspector` (`GetSummary`, `GetWalletState`, `GetInfo`, `UpdateAppearance`), `ChannelGateway`, `PaymentGateway`, `PaymentProgress`, `PaymentNotifier` |
-| `application` | `NodeService` (lister, infos, URI, alias/couleur), `ChannelService` (peer, canal, facture, paiement) |
-| adaptateurs | `grpc/lnd.Gateway` implémente `NodeInspector` + `ChannelGateway` + `PaymentGateway` ; `filesystem` → `NodeRepository` ; `sse.PaymentNotifier` → `PaymentNotifier` ; `http/lightning` appelle les services |
+| `port` (sortants) | `NodeRepository`, `NodeInspector` (`GetSummary`, `GetWalletState`, `GetInfo`, `UpdateAppearance`), `WalletGateway` (`Unlock`), `ChannelGateway`, `PaymentGateway`, `PaymentProgress`, `PaymentNotifier` |
+| `application` | `NodeService` (lister, infos, URI, alias/couleur, déverrouillage du wallet), `ChannelService` (peer, canal, facture, paiement) |
+| adaptateurs | `grpc/lnd.Gateway` implémente `NodeInspector` + `WalletGateway` + `ChannelGateway` + `PaymentGateway` ; `filesystem` → `NodeRepository` ; `sse.PaymentNotifier` → `PaymentNotifier` ; `http/lightning` appelle les services |
 
 Les erreurs de validation du métier sont des sentinelles (`errors.Is`) : le handler répond **400** pour elles et **500** pour les autres.
 
@@ -97,6 +97,7 @@ Les handlers répondent en HTML (fragments HTMX) si l'en-tête `HX-Request: true
 | `/lightning/nodes` | GET | liste de tous les nœuds avec l'état de leur wallet (`walletState`, libellé `walletLabel`) |
 | `/lightning/nodeInfo?id=` | GET | état d'un nœud |
 | `/lightning/uri?id=` | GET | première URI publique du nœud |
+| `/lightning/wallet/unlock` | POST | déverrouiller le wallet (`id`, `password` dans le corps uniquement) ; `HX-Trigger: wallet-unlocked` si succès |
 | `/lightning/peer` | POST | connecter un peer (`id`, `uri`) |
 | `/lightning/channel` | POST | ouvrir un canal (`id`, `pubKey`, `amount`) |
 | `/lightning/invoice` | POST | créer une facture (`id`, `memo`, `amount`) |
@@ -118,6 +119,24 @@ GET /lightning/nodes
   ← walletState (valeur brute) + walletLabel (Unlocked / Starting / Locked / No wallet / Unreachable / Unknown)
 ```
 Limite connue : un nœud sans wallet créé n'a pas de `admin.macaroon`, donc la connexion échoue et le nœud apparaît `Unreachable` ; en pratique le libellé `No wallet` n'est donc pas atteint.
+
+## Exemple de flux : déverrouillage du wallet
+```
+POST /lightning/wallet/unlock          (id et password dans le corps uniquement, jamais dans la query string)
+  → http/lightning.HandleUnlockWallet       lit le password avec PostFormValue, valide l'id
+  → application.NodeService.UnlockWallet    password vide → ErrWalletPasswordRequired (400)
+      → NodeInspector.GetWalletState        lnrpc.State/GetState ; erreur (nœud injoignable) → 500, pas d'appel à Unlock
+      → état non_existing → ErrWalletNotCreated (400) ; état autre que locked → ErrWalletNotLocked (400)
+  → port WalletGateway.Unlock               ← grpc/lnd.Gateway : lnrpc.WalletUnlocker/UnlockWallet (synchrone)
+      message LND "invalid passphrase"           → ErrInvalidWalletPassword (400)
+      "already unlocked" / "wallet not found"    → ErrWalletNotLocked / ErrWalletNotCreated (400)
+      autre erreur                               → 500
+  ← succès : HX-Trigger: wallet-unlocked (aussi hors HTMX) + toast de succès
+    erreur : toast d'erreur sans HX-Trigger (messages constants, le mot de passe n'apparaît jamais)
+```
+Côté frontend (`frontend/templates/node.html`), le bouton 🔓 n'apparaît que sur les nœuds `locked` et ouvre une `<dialog>` qui demande le mot de passe.
+La requête passe par le proxy `/api/`. En cas de succès, la dialogue se ferme et la liste se rafraîchit ; tant qu'un nœud est en démarrage (`data-starting`, libellé `Starting`), la liste est rechargée toutes les 3 s jusqu'à passer à `Unlocked`.
+La commande `lncli ... unlock` reste possible en parallèle. La création d'un wallet (`InitWallet`) n'est pas gérée par l'application.
 
 ## Exemple de flux : paiement d'une facture
 ```
@@ -143,3 +162,11 @@ Connexion via `POSTGRES_DSN`. Déployée par Helm (Bitnami) sur Kubernetes (`mak
 ## Erreurs
 `exception.NewError(message, cause)` crée une `*AppError` qui mémorise `fichier:ligne` et la cause ; la chaîne s'affiche niveau par niveau
 dans les logs (`common.LogException`) et reste compatible avec `errors.Is` / `errors.As`.
+
+## Limites connues
+
+Le playground tourne sur simnet et n'a pas d'authentification. Risques connus et acceptés pour la route `POST /lightning/wallet/unlock` :
+- **Pas d'authentification, de protection CSRF ni de limitation de débit.** C'est le cas de toutes les routes qui modifient l'état (`/lightning/paiment`, `/lightning/channel`, ...). Une page web ouverte dans le même navigateur peut donc envoyer des tentatives de mot de passe. Les wallets sont des wallets simnet sans valeur, et le déverrouillage ne déplace aucun fonds.
+- **Mot de passe transmis en HTTP clair** entre le navigateur et le frontend. `docker-compose.yml` publie `${FRONTEND_PORT}` sur toutes les interfaces, et l'ingress Kubernetes n'a pas de section `tls:`. Ne pas exposer l'application en dehors de la machine locale.
+- **Mot de passe conservé en mémoire** sous forme de `string` Go, donc non effaçable.
+- **Messages d'erreur LND** : le backend reconnaît les échecs par leur texte (`invalid passphrase`, `already unlocked`, `wallet not found`), ce qui suppose LND v0.20. Une autre version peut changer ces textes.

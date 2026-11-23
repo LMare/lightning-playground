@@ -72,7 +72,7 @@ func InitServices(r *Repositories, f *Factories, conf *config.Config) *services 
 	lnd := lnd.NewGateway(f.GrpcClientFactory, lnd.NewConfigConnectionResolver(conf))
 	return &services{
 		user:    userapp.NewUserService(r.User),
-		node:    lightningapp.NewNodeService(r.Node, lnd),
+		node:    lightningapp.NewNodeService(r.Node, lnd, lnd),
 		channel: lightningapp.NewChannelService(lnd, lnd, sse.NewPaymentNotifier()),
 	}
 }

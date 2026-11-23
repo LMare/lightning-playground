@@ -27,7 +27,7 @@ func TestListNodes_WalletStates(t *testing.T) {
 	inspector.On("GetWalletState", mock.Anything, domain.NodeID("lnd-3")).Return(domain.WalletRPCActive, nil)
 	inspector.On("GetSummary", mock.Anything, domain.NodeID("lnd-3")).Return(domain.NodeSummary{}, errors.New("boom"))
 
-	nodes, err := application.NewNodeService(repo, inspector).ListNodes(context.Background())
+	nodes, err := application.NewNodeService(repo, inspector, &testsupport.MockWalletGateway{}).ListNodes(context.Background())
 
 	assert.NoError(t, err)
 	assert.Equal(t, []domain.NodeSummary{
@@ -45,7 +45,7 @@ func TestListNodes_RepositoryError(t *testing.T) {
 	repo := &testsupport.MockNodeRepository{}
 	repo.On("GetNodesIds").Return([]string(nil), errors.New("no storage"))
 
-	_, err := application.NewNodeService(repo, &testsupport.MockNodeInspector{}).ListNodes(context.Background())
+	_, err := application.NewNodeService(repo, &testsupport.MockNodeInspector{}, &testsupport.MockWalletGateway{}).ListNodes(context.Background())
 
 	assert.Error(t, err)
 }
@@ -54,7 +54,7 @@ func TestGetURI(t *testing.T) {
 	inspector := &testsupport.MockNodeInspector{}
 	inspector.On("GetInfo", mock.Anything, domain.NodeID("a")).Return(domain.NodeInfo{URIs: []string{"k@h:1"}}, nil)
 	inspector.On("GetInfo", mock.Anything, domain.NodeID("b")).Return(domain.NodeInfo{}, nil)
-	svc := application.NewNodeService(&testsupport.MockNodeRepository{}, inspector)
+	svc := application.NewNodeService(&testsupport.MockNodeRepository{}, inspector, &testsupport.MockWalletGateway{})
 
 	uri, err := svc.GetURI(context.Background(), "a")
 	assert.NoError(t, err)

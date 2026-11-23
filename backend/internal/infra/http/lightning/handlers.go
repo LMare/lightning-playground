@@ -39,6 +39,40 @@ func failUseCase(response http.ResponseWriter, request *http.Request, message st
 	common.Fail(response, request, message, err)
 }
 
+// HandleUnlockWallet unlocks the wallet of a node. The password is only read from the POST body
+// (never the query string) and never logged.
+func (h *Handler) HandleUnlockWallet(response http.ResponseWriter, request *http.Request) {
+	if err := request.ParseForm(); err != nil {
+		common.FailCheck(response, request, "Invalid request.", nil)
+		return
+	}
+	id, ok := nodeIDFromRequest(response, request, "Missing or invalid node id.")
+	if !ok {
+		return
+	}
+
+	err := h.nodeService.UnlockWallet(request.Context(), id, []byte(request.PostFormValue("password")))
+	switch {
+	case err == nil:
+		response.Header().Set("HX-Trigger", "wallet-unlocked")
+		if common.IsHTMX(request) {
+			common.HTMXMessageOk(response, "Wallet unlocked, the node is starting.")
+		} else {
+			common.OkNoContent(response)
+		}
+	case errors.Is(err, domain.ErrWalletPasswordRequired):
+		common.FailCheck(response, request, "Missing password", err)
+	case errors.Is(err, domain.ErrInvalidWalletPassword):
+		common.FailCheck(response, request, "Wrong wallet password.", err)
+	case errors.Is(err, domain.ErrWalletNotLocked):
+		common.FailCheck(response, request, "The wallet is not locked.", err)
+	case errors.Is(err, domain.ErrWalletNotCreated):
+		common.FailCheck(response, request, "No wallet on this node, create it first.", err)
+	default:
+		common.Fail(response, request, "Unable to reach the LND node.", err)
+	}
+}
+
 // get the list of node
 func (h *Handler) HandleListOfNodes(response http.ResponseWriter, request *http.Request) {
 	nodes, err := h.nodeService.ListNodes(request.Context())

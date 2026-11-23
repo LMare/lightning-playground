@@ -50,6 +50,7 @@ func InitRouter(handlers *handlers) http.Handler {
 	router.add("/lightning/nodeInfo", http.MethodGet, handlers.lightning.HandleNodeInfo)
 	router.add("/lightning/paiment", http.MethodPost, handlers.lightning.HandleMakePayment)
 	router.add("/lightning/peer", http.MethodPost, handlers.lightning.HandleAddPeer)
+	router.add("/lightning/wallet/unlock", http.MethodPost, handlers.lightning.HandleUnlockWallet)
 	router.add("/lightning/uri", http.MethodGet, handlers.lightning.HandleShowUri)
 
 	router.add("/users", http.MethodGet, handlers.user.HandleListUsers)

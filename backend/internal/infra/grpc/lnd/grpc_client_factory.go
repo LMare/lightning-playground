@@ -30,6 +30,7 @@ type GrpcClient interface {
 	GetLightningClient() lnrpc.LightningClient
 	GetRouterClient() routerrpc.RouterClient
 	GetStateClient() lnrpc.StateClient
+	GetWalletUnlockerClient() lnrpc.WalletUnlockerClient
 	Close() error
 }
 
@@ -50,6 +51,7 @@ func (f *grpcClientFactoryImpl) NewClient(dataClient NodeConnection) (GrpcClient
 		lightningClient: lnrpc.NewLightningClient(conn),
 		routerClient:    routerrpc.NewRouterClient(conn),
 		stateClient:     lnrpc.NewStateClient(conn),
+		unlockerClient:  lnrpc.NewWalletUnlockerClient(conn),
 		conn:            conn,
 	}, nil
 }
@@ -114,6 +116,7 @@ type grpcClientImpl struct {
 	lightningClient lnrpc.LightningClient
 	routerClient    routerrpc.RouterClient
 	stateClient     lnrpc.StateClient
+	unlockerClient  lnrpc.WalletUnlockerClient
 	conn            *grpc.ClientConn
 }
 
@@ -130,6 +133,11 @@ func (f *grpcClientImpl) GetRouterClient() routerrpc.RouterClient {
 // GetStateClient returns the State RPC client.
 func (f *grpcClientImpl) GetStateClient() lnrpc.StateClient {
 	return f.stateClient
+}
+
+// GetWalletUnlockerClient returns the WalletUnlocker RPC client.
+func (f *grpcClientImpl) GetWalletUnlockerClient() lnrpc.WalletUnlockerClient {
+	return f.unlockerClient
 }
 
 // Close the gRPC connection

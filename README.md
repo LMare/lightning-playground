@@ -28,7 +28,7 @@ TODO :
   - monitoring (alerts)
   - monitoring (logs)
   - SSE with Deployement Backend broken -> need to put a broker (ex: Redis)
-  - Wallet creation/unlock is handled by the backend via gRPC `WalletUnlocker` service).
+  - Wallet creation (`InitWallet`, still done with lncli) to be handled by the backend via gRPC `WalletUnlocker` service.
   - Define NetworkPolicies to restrict communication paths (frontend ↔ backend ↔ LND ↔ btcd) ?
   - infra as code (Terraform + kubernetes with Kind) ?
   - LLM
@@ -80,6 +80,7 @@ kubectl exec -it lnd-0 -n lightning-playground -- lncli --network=simnet create
 kubectl exec -it lnd-1 -n lightning-playground -- lncli --network=simnet create
 kubectl exec -it lnd-2 -n lightning-playground -- lncli --network=simnet create
 ```
+The wallet creation is still done with `lncli`. The app only unlocks an existing wallet (see below).
 
 To mine with one of these address do :
 ```bash
@@ -107,6 +108,8 @@ kubectl exec -it btcd-0 -n lightning-playground -- btcctl --simnet generate 1500
 ```
 
 ### Unlock the wallet
+The wallet can be unlocked from the app: click the 🔓 button of a locked node in the node list and enter the password. The `lncli` procedure below still works.
+
 After each up of the lnd containers, the wallet must be unlock
 ```bash
 # Docker compose

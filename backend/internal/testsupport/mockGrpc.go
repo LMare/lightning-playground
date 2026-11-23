@@ -66,6 +66,18 @@ func (m *MockStateClient) GetState(ctx context.Context, in *lnrpc.GetStateReques
 	return resp, args.Error(1)
 }
 
+// MockWalletUnlockerClient mocks the LND WalletUnlocker service.
+type MockWalletUnlockerClient struct {
+	lnrpc.WalletUnlockerClient
+	mock.Mock
+}
+
+func (m *MockWalletUnlockerClient) UnlockWallet(ctx context.Context, in *lnrpc.UnlockWalletRequest, _ ...grpc.CallOption) (*lnrpc.UnlockWalletResponse, error) {
+	args := m.Called(ctx, in)
+	resp, _ := args.Get(0).(*lnrpc.UnlockWalletResponse)
+	return resp, args.Error(1)
+}
+
 // MockRouterClient mocks the LND Router service.
 type MockRouterClient struct {
 	routerrpc.RouterClient
@@ -108,6 +120,8 @@ type GrpcClientFactoryMock struct {
 	State *MockStateClient
 	// StateByAddress overrides State for a given node address (e.g. "lnd-1.lnd.test:10009").
 	StateByAddress map[string]*MockStateClient
+	// WalletUnlocker is the WalletUnlocker service mock.
+	WalletUnlocker *MockWalletUnlockerClient
 	// Connections records the connection info requested by the gateway.
 	Connections []lnd.NodeConnection
 	// Err makes NewClient fail when set.
@@ -115,7 +129,7 @@ type GrpcClientFactoryMock struct {
 }
 
 func NewGrpcClientFactoryMock() *GrpcClientFactoryMock {
-	return &GrpcClientFactoryMock{Lightning: &MockLightningClient{}, Router: &MockRouterClient{}, State: &MockStateClient{}}
+	return &GrpcClientFactoryMock{Lightning: &MockLightningClient{}, Router: &MockRouterClient{}, State: &MockStateClient{}, WalletUnlocker: &MockWalletUnlockerClient{}}
 }
 
 func (f *GrpcClientFactoryMock) NewClient(conn lnd.NodeConnection) (lnd.GrpcClient, error) {
@@ -127,18 +141,20 @@ func (f *GrpcClientFactoryMock) NewClient(conn lnd.NodeConnection) (lnd.GrpcClie
 	if st, ok := f.StateByAddress[conn.Address]; ok {
 		state = st
 	}
-	return &mockClient{lightning: f.Lightning, router: f.Router, state: state}, nil
+	return &mockClient{lightning: f.Lightning, router: f.Router, state: state, unlocker: f.WalletUnlocker}, nil
 }
 
 type mockClient struct {
 	lightning lnrpc.LightningClient
 	router    routerrpc.RouterClient
 	state     lnrpc.StateClient
+	unlocker  lnrpc.WalletUnlockerClient
 }
 
-func (c *mockClient) GetLightningClient() lnrpc.LightningClient { return c.lightning }
-func (c *mockClient) GetRouterClient() routerrpc.RouterClient   { return c.router }
-func (c *mockClient) GetStateClient() lnrpc.StateClient         { return c.state }
-func (c *mockClient) Close() error                              { return nil }
+func (c *mockClient) GetLightningClient() lnrpc.LightningClient           { return c.lightning }
+func (c *mockClient) GetRouterClient() routerrpc.RouterClient             { return c.router }
+func (c *mockClient) GetStateClient() lnrpc.StateClient                   { return c.state }
+func (c *mockClient) GetWalletUnlockerClient() lnrpc.WalletUnlockerClient { return c.unlocker }
+func (c *mockClient) Close() error                                        { return nil }
 
 var _ lnd.GrpcClientFactory = (*GrpcClientFactoryMock)(nil)

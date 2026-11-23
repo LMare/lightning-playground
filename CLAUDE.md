@@ -34,10 +34,10 @@ Entrypoints: `backend/cmd` (backend binary: `main.go` + `migration.go`), and `cm
 
 Backend (`backend/internal/`) is hexagonal, split in `business/` and `infra/` (rule: `business` never imports `infra`, `bootstrap`, `testsupport`, the LND protobuf package or root config; enforced by `archtest/architecture_test.go`):
 - `business/<context>/` with `domain/`, `port/` (outbound interfaces), `application/` (use cases, depend only on ports). Two contexts, independent from each other:
-  - `lightning` — domain: `NodeID` (validated), `NodeSummary` (with `WalletState`), `NodeInfo`, `PeerAddress`, `PaymentUpdate`, `WalletState` (`IsReady`: `rpc_active`/`server_active`), business errors (no json tags). Ports: `NodeRepository`, `NodeInspector` (`GetSummary`, `GetWalletState`, `GetInfo`, `UpdateAppearance`), `ChannelGateway`, `PaymentGateway`, `PaymentProgress`, `PaymentNotifier`. Services: `NodeService` (`ListNodes` keeps every node with its wallet state), `ChannelService`.
+  - `lightning` — domain: `NodeID` (validated), `NodeSummary` (with `WalletState`), `NodeInfo`, `PeerAddress`, `PaymentUpdate`, `WalletState` (`IsReady`: `rpc_active`/`server_active`), business errors (no json tags). Ports: `NodeRepository`, `NodeInspector` (`GetSummary`, `GetWalletState`, `GetInfo`, `UpdateAppearance`), `WalletGateway` (`Unlock`), `ChannelGateway`, `PaymentGateway`, `PaymentProgress`, `PaymentNotifier`. Services: `NodeService` (`ListNodes` keeps every node with its wallet state; `UnlockWallet`), `ChannelService`.
   - `user` — demo user listing (`UserRepository.FindAll`).
 - `infra/` adapters, one folder per technology:
-  - `grpc/lnd` — `Gateway` implements the 3 LND ports; `GrpcClientFactory`/`ConnectionResolver` build the connection from config. LND protobuf types never leave this package.
+  - `grpc/lnd` — `Gateway` implements the 4 LND ports; `GrpcClientFactory`/`ConnectionResolver` build the connection from config. LND protobuf types never leave this package.
   - `postgres` — `NewPostgresDB` + user repository. `filesystem` — node repository (lists node dirs under `NodeStorage`).
   - `sse` — SSE hub (sessions) + `PaymentNotifier`.
   - `http/{common,lightning,user}` — handlers, DTOs (`dto.go`, own the json tags) and HTMX templates. Each package embeds its own `templates/` with `go:embed` and parses them once; `common` holds the shared helpers (`Fail`, `HTMXResponse`, success/error toasts), probe/version/stream handlers.

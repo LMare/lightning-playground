@@ -56,6 +56,13 @@ func (m *MockPaymentGateway) PayInvoice(ctx context.Context, id domain.NodeID, p
 	return progress, args.Error(1)
 }
 
+// MockWalletGateway mocks port.WalletGateway.
+type MockWalletGateway struct{ mock.Mock }
+
+func (m *MockWalletGateway) Unlock(ctx context.Context, id domain.NodeID, password []byte) error {
+	return m.Called(ctx, id, password).Error(0)
+}
+
 // MockPaymentNotifier mocks port.PaymentNotifier.
 type MockPaymentNotifier struct{ mock.Mock }
 
@@ -66,4 +73,5 @@ var (
 	_ port.ChannelGateway  = (*MockChannelGateway)(nil)
 	_ port.PaymentGateway  = (*MockPaymentGateway)(nil)
 	_ port.PaymentNotifier = (*MockPaymentNotifier)(nil)
+	_ port.WalletGateway   = (*MockWalletGateway)(nil)
 )
