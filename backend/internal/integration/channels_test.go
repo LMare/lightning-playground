@@ -164,7 +164,8 @@ func TestChannels_Close_Cooperative(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, rr.Code)
 	assert.JSONEq(t, `{"closingTxId":"`+strings.Repeat("ee", 32)+`"}`, rr.Body.String())
-	assert.Equal(t, "channel-closed", rr.Header().Get("HX-Trigger"))
+	// Non-HTMX (JSON) request: no HTMX response header.
+	assert.Empty(t, rr.Header().Get("HX-Trigger"))
 	h.GrpcFactory.Lightning.AssertCalled(t, "CloseChannel", mock.Anything, mock.MatchedBy(func(r *lnrpc.CloseChannelRequest) bool {
 		return !r.Force && r.GetChannelPoint().GetFundingTxidStr() == chTx1 && r.GetChannelPoint().GetOutputIndex() == 0
 	}))

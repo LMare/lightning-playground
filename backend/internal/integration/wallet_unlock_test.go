@@ -72,6 +72,7 @@ func TestUnlock_Success_NoHTMX(t *testing.T) {
 	rr := doPlain(h, http.MethodPost, unlockPath, unlockForm())
 
 	assert.Equal(t, http.StatusNoContent, rr.Code)
+	assert.Empty(t, rr.Header().Get("HX-Trigger"))
 }
 
 func TestUnlock_WrongPassword(t *testing.T) {
