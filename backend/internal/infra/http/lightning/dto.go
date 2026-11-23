@@ -68,3 +68,58 @@ func walletLabel(s domain.WalletState) string {
 		return "Unknown"
 	}
 }
+
+type channelDTO struct {
+	ChannelPoint     string `json:"channelPoint"`
+	RemotePubKey     string `json:"remotePubKey"`
+	CapacitySat      int64  `json:"capacitySat"`
+	LocalBalanceSat  int64  `json:"localBalanceSat"`
+	RemoteBalanceSat int64  `json:"remoteBalanceSat"`
+	Status           string `json:"status"`
+	StatusLabel      string `json:"statusLabel"`
+	Closable         bool   `json:"closable"`
+}
+
+// channelsView is the model of the HTMX channels template.
+type channelsView struct {
+	NodeID   string
+	Channels []channelDTO
+}
+
+type closeChannelDTO struct {
+	ClosingTxID string `json:"closingTxId"`
+}
+
+func toChannelDTOs(channels []domain.Channel) []channelDTO {
+	dtos := make([]channelDTO, 0, len(channels))
+	for _, c := range channels {
+		dtos = append(dtos, channelDTO{
+			ChannelPoint:     c.Point.String(),
+			RemotePubKey:     c.RemotePubKey,
+			CapacitySat:      c.CapacitySat,
+			LocalBalanceSat:  c.LocalBalanceSat,
+			RemoteBalanceSat: c.RemoteBalanceSat,
+			Status:           string(c.Status),
+			StatusLabel:      channelStatusLabel(c.Status),
+			Closable:         c.IsClosable(),
+		})
+	}
+	return dtos
+}
+
+func channelStatusLabel(s domain.ChannelStatus) string {
+	switch s {
+	case domain.ChannelActive:
+		return "Active"
+	case domain.ChannelInactive:
+		return "Inactive"
+	case domain.ChannelPendingOpen:
+		return "Opening"
+	case domain.ChannelClosing:
+		return "Closing"
+	case domain.ChannelForceClosing:
+		return "Force closing"
+	default:
+		return "Unknown"
+	}
+}

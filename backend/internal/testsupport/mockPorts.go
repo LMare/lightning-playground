@@ -42,6 +42,17 @@ func (m *MockChannelGateway) OpenChannel(ctx context.Context, id domain.NodeID, 
 	return m.Called(ctx, id, pubKey, amount).Error(0)
 }
 
+func (m *MockChannelGateway) ListChannels(ctx context.Context, id domain.NodeID) ([]domain.Channel, error) {
+	args := m.Called(ctx, id)
+	channels, _ := args.Get(0).([]domain.Channel)
+	return channels, args.Error(1)
+}
+
+func (m *MockChannelGateway) CloseChannel(ctx context.Context, id domain.NodeID, point domain.ChannelPoint, force bool) (string, error) {
+	args := m.Called(ctx, id, point, force)
+	return args.String(0), args.Error(1)
+}
+
 // MockPaymentGateway mocks port.PaymentGateway.
 type MockPaymentGateway struct{ mock.Mock }
 

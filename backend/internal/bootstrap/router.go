@@ -45,6 +45,8 @@ func InitRouter(handlers *handlers) http.Handler {
 
 	router.add("/lightning/alias", http.MethodPut, handlers.lightning.HandleUpdateNodeAlias)
 	router.add("/lightning/channel", http.MethodPost, handlers.lightning.HandleOpenChannel)
+	router.add("/lightning/channel/close", http.MethodPost, handlers.lightning.HandleCloseChannel)
+	router.add("/lightning/channels", http.MethodGet, handlers.lightning.HandleListChannels)
 	router.add("/lightning/invoice", http.MethodPost, handlers.lightning.HandleCreateInvoice)
 	router.add("/lightning/nodes", http.MethodGet, handlers.lightning.HandleListOfNodes)
 	router.add("/lightning/nodeInfo", http.MethodGet, handlers.lightning.HandleNodeInfo)

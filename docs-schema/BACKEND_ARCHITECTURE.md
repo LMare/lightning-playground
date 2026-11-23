@@ -100,6 +100,8 @@ Les handlers répondent en HTML (fragments HTMX) si l'en-tête `HX-Request: true
 | `/lightning/wallet/unlock` | POST | déverrouiller le wallet (`id`, `password` dans le corps uniquement) ; `HX-Trigger: wallet-unlocked` si succès |
 | `/lightning/peer` | POST | connecter un peer (`id`, `uri`) |
 | `/lightning/channel` | POST | ouvrir un canal (`id`, `pubKey`, `amount`) |
+| `/lightning/channels` | GET | lister les canaux ouverts et en attente (`id`) ; JSON ou HTMX (`channels.html`) |
+| `/lightning/channel/close` | POST | fermer un canal (`id`, `channelPoint` `txid:index`, `force` optionnel, défaut `false`) ; `HX-Trigger: channel-closed` si succès. Pré-contrôle applicatif : canal inconnu, non fermable ou pair hors ligne (fermeture coopérative) -> 400 |
 | `/lightning/invoice` | POST | créer une facture (`id`, `memo`, `amount`) |
 | `/lightning/paiment` | POST | payer une facture (`id`, `paymentRequest`), progression via SSE |
 | `/lightning/alias` | PUT | changer alias et couleur (`id`, `alias`, `color`) |

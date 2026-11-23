@@ -302,3 +302,66 @@ func (h *Handler) HandleUpdateNodeAlias(response http.ResponseWriter, request *h
 		common.OkNoContent(response)
 	}
 }
+
+// HandleListChannels lists the open and pending channels of a node.
+func (h *Handler) HandleListChannels(response http.ResponseWriter, request *http.Request) {
+	id, ok := nodeIDFromRequest(response, request, "Missing or invalid node id.")
+	if !ok {
+		return
+	}
+
+	channels, err := h.channelService.ListChannels(request.Context(), id)
+	if err != nil {
+		common.Fail(response, request, "Unable to list the channels.", err)
+		return
+	}
+
+	dtos := toChannelDTOs(channels)
+	if common.IsHTMX(request) {
+		common.HTMXResponse(response, templates, "channels.html", channelsView{NodeID: id.String(), Channels: dtos})
+	} else {
+		common.JSONResponse(response, dtos)
+	}
+}
+
+// HandleCloseChannel closes a channel, cooperatively by default or by force with force=true.
+func (h *Handler) HandleCloseChannel(response http.ResponseWriter, request *http.Request) {
+	if err := request.ParseForm(); err != nil {
+		common.FailCheck(response, request, "Invalid request.", nil)
+		return
+	}
+	id, ok := nodeIDFromRequest(response, request, "Missing or invalid node id.")
+	if !ok {
+		return
+	}
+	force := false
+	if raw := request.FormValue("force"); raw != "" {
+		parsed, err := strconv.ParseBool(raw)
+		if err != nil {
+			common.FailCheck(response, request, "Invalid force value.", err)
+			return
+		}
+		force = parsed
+	}
+
+	txid, err := h.channelService.CloseChannel(request.Context(), id, request.FormValue("channelPoint"), force)
+	switch {
+	case err == nil:
+		response.Header().Set("HX-Trigger", "channel-closed")
+		if common.IsHTMX(request) {
+			common.HTMXMessageOk(response, "Channel closing, tx "+truncate(txid, 8))
+		} else {
+			common.JSONResponse(response, closeChannelDTO{ClosingTxID: txid})
+		}
+	case errors.Is(err, domain.ErrInvalidChannelPoint):
+		common.FailCheck(response, request, "Invalid channel point.", err)
+	case errors.Is(err, domain.ErrChannelNotFound):
+		common.FailCheck(response, request, "Channel not found.", err)
+	case errors.Is(err, domain.ErrChannelNotClosable):
+		common.FailCheck(response, request, "This channel cannot be closed.", err)
+	case errors.Is(err, domain.ErrChannelPeerOffline):
+		common.FailCheck(response, request, "The peer is offline, use force close.", err)
+	default:
+		common.Fail(response, request, "Unable to close the channel.", err)
+	}
+}

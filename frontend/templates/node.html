@@ -114,6 +114,22 @@
 			</div>
 		</section>
 
+		<!-- Channels -->
+		<section style="display:none;" class="mt-6 mx-6 w-100 bg-base-100 p-4 rounded-box shadow-md node-event-container">
+			<h2 class="text-xl text-center font-semibold mb-2">⚡️ Channels ⚡️</h2>
+			<table class="table">
+				<thead><tr><th>Peer</th><th>Capacity</th><th>Local</th><th>Remote</th><th>Status</th><th></th></tr></thead>
+				<tbody
+					class="node-event"
+					hx-get="/api/lightning/channels"
+					hx-vals=""
+					hx-trigger="nodeSelected, channel-closed from:body"
+					hx-target="this"
+					hx-swap="innerHTML">
+				</tbody>
+			</table>
+		</section>
+
 		<!-- Pairs -->
 		<section style="display:none;" class="mt-6 mx-6 w-100 bg-base-100 p-4 rounded-box shadow-md node-event-container">
 			<h2 class="text-xl text-center font-semibold mb-2">⚡️ Pairs ⚡️</h2>

@@ -52,3 +52,37 @@ func (s *ChannelService) Pay(ctx context.Context, id domain.NodeID, paymentReque
 	s.notifier.Watch(progress)
 	return nil
 }
+
+// ListChannels returns the open and pending channels of the node.
+func (s *ChannelService) ListChannels(ctx context.Context, id domain.NodeID) ([]domain.Channel, error) {
+	return s.channels.ListChannels(ctx, id)
+}
+
+// CloseChannel closes the channel identified by its channel point, cooperatively or by force,
+// and returns the closing transaction id.
+func (s *ChannelService) CloseChannel(ctx context.Context, id domain.NodeID, rawPoint string, force bool) (string, error) {
+	point, err := domain.ParseChannelPoint(rawPoint)
+	if err != nil {
+		return "", err
+	}
+	channels, err := s.channels.ListChannels(ctx, id)
+	if err != nil {
+		return "", err
+	}
+	var target *domain.Channel
+	for i := range channels {
+		if channels[i].Point == point {
+			target = &channels[i]
+			break
+		}
+	}
+	switch {
+	case target == nil:
+		return "", domain.ErrChannelNotFound
+	case !target.IsClosable():
+		return "", domain.ErrChannelNotClosable
+	case !force && target.Status == domain.ChannelInactive:
+		return "", domain.ErrChannelPeerOffline
+	}
+	return s.channels.CloseChannel(ctx, id, point, force)
+}
