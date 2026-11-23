@@ -10,13 +10,13 @@
 				<input type="hidden" name="id" value="{{$node}}">
 				<input type="hidden" name="channelPoint" value="{{.ChannelPoint}}">
 				<input type="hidden" name="force" value="false">
-				<button type="submit" class="text-sm" title="Close the channel">Close</button>
+				<button type="submit" class="border border-gray-300 p-1 rounded text-sm" title="Close the channel">Close</button>
 			</form>
 			<form hx-post="__API_PREFIX__/lightning/channel/close" hx-swap="none" hx-confirm="Force close this channel? Your funds stay locked for the CSV delay." style="display:inline">
 				<input type="hidden" name="id" value="{{$node}}">
 				<input type="hidden" name="channelPoint" value="{{.ChannelPoint}}">
 				<input type="hidden" name="force" value="true">
-				<button type="submit" class="text-sm" title="Force close the channel">Force close</button>
+				<button type="submit" class="border border-gray-300 p-1 rounded text-sm" title="Force close the channel">Force close</button>
 			</form>
 		{{end}}</td>
 	</tr>

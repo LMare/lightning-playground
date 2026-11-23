@@ -54,8 +54,8 @@ func (h *Handler) HandleUnlockWallet(response http.ResponseWriter, request *http
 	err := h.nodeService.UnlockWallet(request.Context(), id, []byte(request.PostFormValue("password")))
 	switch {
 	case err == nil:
-		response.Header().Set("HX-Trigger", "wallet-unlocked")
 		if common.IsHTMX(request) {
+			response.Header().Set("HX-Trigger", "wallet-unlocked")
 			common.HTMXMessageOk(response, "Wallet unlocked, the node is starting.")
 		} else {
 			common.OkNoContent(response)
@@ -347,8 +347,8 @@ func (h *Handler) HandleCloseChannel(response http.ResponseWriter, request *http
 	txid, err := h.channelService.CloseChannel(request.Context(), id, request.FormValue("channelPoint"), force)
 	switch {
 	case err == nil:
-		response.Header().Set("HX-Trigger", "channel-closed")
 		if common.IsHTMX(request) {
+			response.Header().Set("HX-Trigger", "channel-closed")
 			common.HTMXMessageOk(response, "Channel closing, tx "+truncate(txid, 8))
 		} else {
 			common.JSONResponse(response, closeChannelDTO{ClosingTxID: txid})
