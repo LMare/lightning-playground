@@ -119,9 +119,9 @@ type GrpcClientFactoryMock struct {
 	// State is the default State service mock.
 	State *MockStateClient
 	// StateByAddress overrides State for a given node address (e.g. "lnd-1.lnd.test:10009").
+	StateByAddress map[string]*MockStateClient
 	// WalletUnlocker is the WalletUnlocker service mock.
 	WalletUnlocker *MockWalletUnlockerClient
-	StateByAddress map[string]*MockStateClient
 	// Connections records the connection info requested by the gateway.
 	Connections []lnd.NodeConnection
 	// Err makes NewClient fail when set.
