@@ -15,7 +15,7 @@ graph LR
         subgraph LN["lightning"]
             LAPP["application<br/>NodeService · ChannelService"]
             LDOM["domain<br/>NodeID · NodeInfo · PeerAddress · PaymentUpdate"]
-            LPORT["port<br/>NodeInspector · ChannelGateway<br/>PaymentGateway · PaymentNotifier<br/>NodeRepository"]
+            LPORT["port<br/>NodeInspector · WalletGateway<br/>ChannelGateway<br/>PaymentGateway · PaymentNotifier<br/>NodeRepository"]
         end
         subgraph US["user"]
             UAPP["application<br/>UserService"]
@@ -79,9 +79,9 @@ backend/
 | Couche | Contenu |
 |--------|---------|
 | `domain` | `NodeID` (validé : lettres, chiffres, `_`, `-`), `NodeSummary` (avec `WalletState`), `NodeInfo`, `PeerAddress` (`pubkey@host`), `PaymentUpdate`, `WalletState` (`IsReady` : `rpc_active` et `server_active`), erreurs métier (`ErrInvalidNodeID`, `ErrInvalidPeerAddress`, `ErrInvalidAmount`) |
-| `port` (sortants) | `NodeRepository`, `NodeInspector` (`GetSummary`, `GetWalletState`, `GetInfo`, `UpdateAppearance`), `ChannelGateway`, `PaymentGateway`, `PaymentProgress`, `PaymentNotifier` |
+| `port` (sortants) | `NodeRepository`, `NodeInspector` (`GetSummary`, `GetWalletState`, `GetInfo`, `UpdateAppearance`), `WalletGateway` (`Unlock`), `ChannelGateway`, `PaymentGateway`, `PaymentProgress`, `PaymentNotifier` |
 | `application` | `NodeService` (lister, infos, URI, alias/couleur), `ChannelService` (peer, canal, facture, paiement) |
-| adaptateurs | `grpc/lnd.Gateway` implémente `NodeInspector` + `ChannelGateway` + `PaymentGateway` ; `filesystem` → `NodeRepository` ; `sse.PaymentNotifier` → `PaymentNotifier` ; `http/lightning` appelle les services |
+| adaptateurs | `grpc/lnd.Gateway` implémente `NodeInspector` + `WalletGateway` + `ChannelGateway` + `PaymentGateway` ; `filesystem` → `NodeRepository` ; `sse.PaymentNotifier` → `PaymentNotifier` ; `http/lightning` appelle les services |
 
 Les erreurs de validation du métier sont des sentinelles (`errors.Is`) : le handler répond **400** pour elles et **500** pour les autres.
 
@@ -97,6 +97,7 @@ Les handlers répondent en HTML (fragments HTMX) si l'en-tête `HX-Request: true
 | `/lightning/nodes` | GET | liste de tous les nœuds avec l'état de leur wallet (`walletState`, libellé `walletLabel`) |
 | `/lightning/nodeInfo?id=` | GET | état d'un nœud |
 | `/lightning/uri?id=` | GET | première URI publique du nœud |
+| `/lightning/wallet/unlock` | POST | déverrouiller le wallet (`id`, `password` dans le corps uniquement) ; `HX-Trigger: wallet-unlocked` si succès |
 | `/lightning/peer` | POST | connecter un peer (`id`, `uri`) |
 | `/lightning/channel` | POST | ouvrir un canal (`id`, `pubKey`, `amount`) |
 | `/lightning/invoice` | POST | créer une facture (`id`, `memo`, `amount`) |

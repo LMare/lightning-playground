@@ -8,14 +8,15 @@ import (
 	"github.com/Lmare/lightning-playground/backend/internal/business/lightning/port"
 )
 
-func NewNodeService(repo port.NodeRepository, inspector port.NodeInspector) *NodeService {
-	return &NodeService{repo: repo, inspector: inspector}
+func NewNodeService(repo port.NodeRepository, inspector port.NodeInspector, wallet port.WalletGateway) *NodeService {
+	return &NodeService{repo: repo, inspector: inspector, wallet: wallet}
 }
 
 // NodeService is the use case set about the nodes themselves.
 type NodeService struct {
 	repo      port.NodeRepository
 	inspector port.NodeInspector
+	wallet    port.WalletGateway
 }
 
 // ListNodes returns every node with its wallet state. Alias and color are only filled when the
@@ -70,4 +71,23 @@ func (s *NodeService) GetURI(ctx context.Context, id domain.NodeID) (string, err
 // UpdateAppearance changes the alias and the color of a node.
 func (s *NodeService) UpdateAppearance(ctx context.Context, id domain.NodeID, alias, color string) error {
 	return s.inspector.UpdateAppearance(ctx, id, alias, color)
+}
+
+// UnlockWallet unlocks the wallet of a locked node. The password is never logged.
+func (s *NodeService) UnlockWallet(ctx context.Context, id domain.NodeID, password []byte) error {
+	if len(password) == 0 {
+		return domain.ErrWalletPasswordRequired
+	}
+	state, err := s.inspector.GetWalletState(ctx, id)
+	if err != nil {
+		return err
+	}
+	switch state {
+	case domain.WalletLocked:
+		return s.wallet.Unlock(ctx, id, password)
+	case domain.WalletNonExisting:
+		return domain.ErrWalletNotCreated
+	default:
+		return domain.ErrWalletNotLocked
+	}
 }

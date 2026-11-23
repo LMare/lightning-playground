@@ -9,30 +9,52 @@
 					<th scope="col" id="id">Id</th>
 					<th scope="col" id="alias">Alias</th>
 					<th scope="col" id="wallet">Wallet</th>
+					<th scope="col" id="unlock">Unlock</th>
 				</thead>
 				<tbody
 					id="table-nodes-body"
 					class="cursor-pointer"
 					data-selected=""
 					hx-get="/api/lightning/nodes"
-					hx-trigger="load, alias-updated from:body"
+					hx-trigger="load, alias-updated from:body, wallet-unlocked from:body, every 3s [document.querySelector('#table-nodes-body tr[data-starting]')]"
 					hx-target="this"
 					hx-swap="innerHTML"
 					hx-on='htmx:afterSwap:
-						enrichRgaaTableRows(this, ["id", "alias", "wallet"]);
+						enrichRgaaTableRows(this, ["id", "alias", "wallet", "unlock"]);
 						if (this.dataset.selected) {
 							const row = document.querySelector("#table-nodes-body tr[data-id=\"" + this.dataset.selected + "\"]");
 							if (row) row.click();
 					   }'>
 
 					<tr>
-						<td colspan="3">Chargement en cours...</td>
+						<td colspan="4">Chargement en cours...</td>
 					</tr>
 				</tbody>
 			</table>
 
 		</section>
 
+
+		<!-- Unlock wallet popup -->
+		<dialog id="unlock-dialog" class="modal">
+			<div class="modal-box">
+				<h3 class="text-lg font-semibold mb-2">🔓 Unlock wallet</h3>
+				<form
+					id="unlock-form"
+					method="dialog"
+					hx-post="/api/lightning/wallet/unlock"
+					hx-swap="none"
+					hx-on="htmx:afterRequest: this.querySelector('input[name=password]').value = ''">
+					<input type="hidden" name="id" id="unlock-id" />
+					<label for="unlock-password" class="text-base text-gray-700">Wallet password</label>
+					<input type="password" name="password" id="unlock-password" autocomplete="current-password" required class="border px-2 py-1 rounded w-full" />
+					<div class="modal-action">
+						<button type="button" class="border border-gray-300 p-1 rounded text-sm" onclick="document.getElementById('unlock-dialog').close()">Cancel</button>
+						<button type="submit" class="border border-gray-300 p-1 rounded text-sm">Unlock</button>
+					</div>
+				</form>
+			</div>
+		</dialog>
 
 		<!-- Info -->
 		<section id="info" style="display: none;" class="mt-6 mx-6 w-100 bg-base-100 p-4 rounded-box shadow-md node-event-container">
@@ -209,6 +231,15 @@
 	/********************************* Event on th tab **************************************/
 
 	document.querySelector("#table-nodes-body").addEventListener("click", function(e) {
+		const unlockBtn = e.target.closest("[data-unlock-id]");
+		if (unlockBtn) {
+			// do not select the row (it would call nodeInfo on a locked node)
+			e.stopPropagation();
+			document.getElementById("unlock-id").value = unlockBtn.dataset.unlockId;
+			document.getElementById("unlock-password").value = "";
+			document.getElementById("unlock-dialog").showModal();
+			return;
+		}
 		let tr = e.target.closest("tr");
 		if (tr) {
 			// css for the selected ligne
@@ -230,6 +261,12 @@
 			});
 
 		}
+	});
+
+	/************************************ Unlock wallet ******************************/
+
+	document.body.addEventListener("wallet-unlocked", function() {
+		document.getElementById("unlock-dialog").close();
 	});
 
 	/*************************************** Common **********************************/

@@ -15,6 +15,13 @@ type NodeInspector interface {
 	UpdateAppearance(ctx context.Context, id domain.NodeID, alias, color string) error
 }
 
+// WalletGateway is the outbound port to manage the wallet of a node.
+type WalletGateway interface {
+	// Unlock decrypts the wallet. It returns domain.ErrInvalidWalletPassword,
+	// domain.ErrWalletNotLocked or domain.ErrWalletNotCreated, or another error if the node is unreachable.
+	Unlock(ctx context.Context, id domain.NodeID, password []byte) error
+}
+
 // ChannelGateway is the outbound port to connect a node to the network.
 type ChannelGateway interface {
 	AddPeer(ctx context.Context, id domain.NodeID, peer domain.PeerAddress) error

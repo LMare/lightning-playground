@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
+	"strings"
 
 	lnrpc "github.com/Lmare/lightning-playground/backend/gRPC/github.com/lightningnetwork/lnd/lnrpc"
 	routerrpc "github.com/Lmare/lightning-playground/backend/gRPC/github.com/lightningnetwork/lnd/lnrpc/routerrpc"
@@ -11,6 +12,7 @@ import (
 	"github.com/Lmare/lightning-playground/backend/internal/business/lightning/port"
 	exception "github.com/Lmare/lightning-playground/backend/internal/shared/exception"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/status"
 )
 
 // Gateway is the outbound adapter talking to LND nodes over gRPC.
@@ -24,6 +26,7 @@ var (
 	_ port.NodeInspector  = (*Gateway)(nil)
 	_ port.ChannelGateway = (*Gateway)(nil)
 	_ port.PaymentGateway = (*Gateway)(nil)
+	_ port.WalletGateway  = (*Gateway)(nil)
 )
 
 func NewGateway(factory GrpcClientFactory, resolver ConnectionResolver) *Gateway {
@@ -135,6 +138,37 @@ func (g *Gateway) UpdateAppearance(ctx context.Context, id domain.NodeID, alias,
 		return exception.NewError("cannot change the color", err)
 	}
 	return nil
+}
+
+// ---------------- WalletGateway ----------------
+
+// Unlock decrypts the wallet of a node. The password is never put in an error or a log.
+func (g *Gateway) Unlock(ctx context.Context, id domain.NodeID, password []byte) error {
+	client, err := g.open(id)
+	if err != nil {
+		return err
+	}
+	defer client.Close()
+
+	if _, err = client.GetWalletUnlockerClient().UnlockWallet(ctx, &lnrpc.UnlockWalletRequest{WalletPassword: password}); err != nil {
+		return toUnlockError(id, err)
+	}
+	return nil
+}
+
+// toUnlockError maps the LND error text (lnd v0.20) to the domain errors.
+func toUnlockError(id domain.NodeID, err error) error {
+	msg := status.Convert(err).Message()
+	switch {
+	case strings.Contains(msg, "invalid passphrase"):
+		return exception.NewError(fmt.Sprintf("Wrong wallet password for Node[%s]", id), domain.ErrInvalidWalletPassword)
+	case strings.Contains(msg, "already unlocked"):
+		return exception.NewError(fmt.Sprintf("Wallet of Node[%s] is not locked", id), domain.ErrWalletNotLocked)
+	case strings.Contains(msg, "wallet not found"):
+		return exception.NewError(fmt.Sprintf("No wallet on Node[%s]", id), domain.ErrWalletNotCreated)
+	default:
+		return exception.NewError(fmt.Sprintf("Unable to unlock wallet of Node[%s]", id), err)
+	}
 }
 
 // ---------------- ChannelGateway ----------------

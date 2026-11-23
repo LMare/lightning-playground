@@ -107,6 +107,8 @@ kubectl exec -it btcd-0 -n lightning-playground -- btcctl --simnet generate 1500
 ```
 
 ### Unlock the wallet
+The wallet can be unlocked from the app: click the 🔓 button of a locked node in the node list and enter the password. The `lncli` procedure below still works.
+
 After each up of the lnd containers, the wallet must be unlock
 ```bash
 # Docker compose

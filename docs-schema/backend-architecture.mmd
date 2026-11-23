@@ -9,7 +9,7 @@ graph LR
         subgraph LN["lightning"]
             LAPP["application<br/>NodeService · ChannelService"]
             LDOM["domain<br/>NodeID · NodeInfo · PeerAddress · PaymentUpdate"]
-            LPORT["port<br/>NodeInspector · ChannelGateway<br/>PaymentGateway · PaymentNotifier<br/>NodeRepository"]
+            LPORT["port<br/>NodeInspector · WalletGateway<br/>ChannelGateway<br/>PaymentGateway · PaymentNotifier<br/>NodeRepository"]
         end
         subgraph US["user"]
             UAPP["application<br/>UserService"]
