@@ -80,7 +80,7 @@ backend/
 |--------|---------|
 | `domain` | `NodeID` (validé : lettres, chiffres, `_`, `-`), `NodeSummary` (avec `WalletState`), `NodeInfo`, `PeerAddress` (`pubkey@host`), `Channel` (canal ouvert ou en attente : `Point`, `RemotePubKey`, `CapacitySat`, `LocalBalanceSat`, `RemoteBalanceSat`, `Status`, méthode `IsClosable`), `ChannelPoint` (`txid:index`, parsé par `ParseChannelPoint` : txid de 64 hex en minuscules, index `uint32`), `ChannelStatus` (`active`, `inactive`, `pending_open`, `closing`, `force_closing`), `PaymentUpdate`, `WalletState` (`IsReady` : `rpc_active` et `server_active`), `Balance` (`OnChainBalance` confirmé/non confirmé/verrouillé/réserve anchor, `ChannelBalance` local/distant/pending-open/unsettled ; `TotalSat` calculé dans le domaine), erreurs métier (`ErrWalletNotReady`, `ErrInvalidNodeID`, `ErrInvalidPeerAddress`, `ErrInvalidAmount`, `ErrInvalidChannelPoint`, `ErrChannelNotFound`, `ErrChannelNotClosable`, `ErrChannelPeerOffline`) |
 | `port` (sortants) | `NodeRepository`, `NodeInspector` (`GetSummary`, `GetWalletState`, `GetInfo`, `UpdateAppearance`), `WalletGateway` (`Unlock`, `GetBalance`), `ChannelGateway` (`AddPeer`, `OpenChannel`, `ListChannels`, `CloseChannel`), `PaymentGateway`, `PaymentProgress`, `PaymentNotifier` |
-| `application` | `NodeService` (lister, infos, URI, alias/couleur, déverrouillage du wallet), `ChannelService` (peer, ouverture, liste et fermeture de canaux, facture, paiement) |
+| `application` | `NodeService` (lister, infos, URI, alias/couleur, déverrouillage du wallet, solde), `ChannelService` (peer, ouverture, liste et fermeture de canaux, facture, paiement) |
 | adaptateurs | `grpc/lnd.Gateway` implémente `NodeInspector` + `WalletGateway` + `ChannelGateway` + `PaymentGateway` ; `filesystem` → `NodeRepository` ; `sse.PaymentNotifier` → `PaymentNotifier` ; `http/lightning` appelle les services |
 
 Les erreurs de validation du métier sont des sentinelles (`errors.Is`) : le handler répond **400** pour elles et **500** pour les autres.
@@ -168,6 +168,8 @@ http/lightning.HandleGetBalance → application.NodeService.GetBalance
   → NodeInspector.GetWalletState ; état non prêt → ErrWalletNotReady (400), sans appel au gateway
   → WalletGateway.GetBalance ← grpc/lnd.Gateway : WalletBalance puis ChannelBalance (une erreur → 500 "Unable to get the balance.")
 ```
+
+Le total (`Balance.TotalSat`) = on-chain confirmé + non confirmé + local des canaux ouverts + unsettled local + pending-open local. Les fonds des canaux en cours de fermeture (limbo) ne sont pas comptés. `lockedSat` et `reservedAnchorSat` sont informatifs : ils ne sont ni ajoutés ni retranchés du total.
 
 Les canaux sont lus par `GET /lightning/channels` (`grpc/lnd.Gateway.ListChannels` : `ListChannels` puis `PendingChannels`) :
 
