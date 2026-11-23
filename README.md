@@ -156,6 +156,9 @@ kubectl exec -it btcd-0 -n lightning-playground -- btcctl --simnet generate 1
 ```
   3. Generate an invoice
   4. Import the invoice on another node and pay-it
+  5. List the channels of a node (open and pending) in the "Channels" section and close one of them:
+     cooperatively by default, or by force (the funds then stay locked for the CSV delay).
+     A closing channel only completes once blocks are mined, as above.
 
 ### Adding lnd node (increase de replicas number)
 ```bash

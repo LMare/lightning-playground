@@ -78,9 +78,9 @@ backend/
 
 | Couche | Contenu |
 |--------|---------|
-| `domain` | `NodeID` (validé : lettres, chiffres, `_`, `-`), `NodeSummary` (avec `WalletState`), `NodeInfo`, `PeerAddress` (`pubkey@host`), `PaymentUpdate`, `WalletState` (`IsReady` : `rpc_active` et `server_active`), erreurs métier (`ErrInvalidNodeID`, `ErrInvalidPeerAddress`, `ErrInvalidAmount`) |
-| `port` (sortants) | `NodeRepository`, `NodeInspector` (`GetSummary`, `GetWalletState`, `GetInfo`, `UpdateAppearance`), `WalletGateway` (`Unlock`), `ChannelGateway`, `PaymentGateway`, `PaymentProgress`, `PaymentNotifier` |
-| `application` | `NodeService` (lister, infos, URI, alias/couleur, déverrouillage du wallet), `ChannelService` (peer, canal, facture, paiement) |
+| `domain` | `NodeID` (validé : lettres, chiffres, `_`, `-`), `NodeSummary` (avec `WalletState`), `NodeInfo`, `PeerAddress` (`pubkey@host`), `Channel` (canal ouvert ou en attente : `Point`, `RemotePubKey`, `CapacitySat`, `LocalBalanceSat`, `RemoteBalanceSat`, `Status`, méthode `IsClosable`), `ChannelPoint` (`txid:index`, parsé par `ParseChannelPoint` : txid de 64 hex en minuscules, index `uint32`), `ChannelStatus` (`active`, `inactive`, `pending_open`, `closing`, `force_closing`), `PaymentUpdate`, `WalletState` (`IsReady` : `rpc_active` et `server_active`), erreurs métier (`ErrInvalidNodeID`, `ErrInvalidPeerAddress`, `ErrInvalidAmount`, `ErrInvalidChannelPoint`, `ErrChannelNotFound`, `ErrChannelNotClosable`, `ErrChannelPeerOffline`) |
+| `port` (sortants) | `NodeRepository`, `NodeInspector` (`GetSummary`, `GetWalletState`, `GetInfo`, `UpdateAppearance`), `WalletGateway` (`Unlock`), `ChannelGateway` (`AddPeer`, `OpenChannel`, `ListChannels`, `CloseChannel`), `PaymentGateway`, `PaymentProgress`, `PaymentNotifier` |
+| `application` | `NodeService` (lister, infos, URI, alias/couleur, déverrouillage du wallet), `ChannelService` (peer, ouverture, liste et fermeture de canaux, facture, paiement) |
 | adaptateurs | `grpc/lnd.Gateway` implémente `NodeInspector` + `WalletGateway` + `ChannelGateway` + `PaymentGateway` ; `filesystem` → `NodeRepository` ; `sse.PaymentNotifier` → `PaymentNotifier` ; `http/lightning` appelle les services |
 
 Les erreurs de validation du métier sont des sentinelles (`errors.Is`) : le handler répond **400** pour elles et **500** pour les autres.
@@ -139,6 +139,44 @@ POST /lightning/wallet/unlock          (id et password dans le corps uniquement,
 Côté frontend (`frontend/templates/node.html`), le bouton 🔓 n'apparaît que sur les nœuds `locked` et ouvre une `<dialog>` qui demande le mot de passe.
 La requête passe par le proxy `/api/`. En cas de succès, la dialogue se ferme et la liste se rafraîchit ; tant qu'un nœud est en démarrage (`data-starting`, libellé `Starting`), la liste est rechargée toutes les 3 s jusqu'à passer à `Unlocked`.
 La commande `lncli ... unlock` reste possible en parallèle. La création d'un wallet (`InitWallet`) n'est pas gérée par l'application.
+
+## Exemple de flux : fermeture d'un canal
+```
+POST /lightning/channel/close           (id, channelPoint = "txid:index", force optionnel, défaut false ; dans le corps uniquement)
+  → http/lightning.HandleCloseChannel        ParseForm ; valide l'id ; force vide → false, sinon strconv.ParseBool (400 si invalide)
+  → application.ChannelService.CloseChannel
+      1. domain.ParseChannelPoint            format invalide → ErrInvalidChannelPoint (400), pas d'appel LND
+      2. port ChannelGateway.ListChannels    erreur → 500, pas de fermeture
+      3. pré-contrôle sur le canal trouvé :
+           absent → ErrChannelNotFound (400)
+           pending_open, closing, force_closing → ErrChannelNotClosable (400)
+           inactive et force=false → ErrChannelPeerOffline (400)
+  → port ChannelGateway.CloseChannel     ← grpc/lnd.Gateway : lnrpc.Lightning/CloseChannel (flux)
+      lit seulement la première mise à jour (ClosePending ou ChanClose) → txid
+          txid : octets inversés puis encodés en hex (convention de chainhash)
+      erreur RPC, erreur de réception ou autre type de mise à jour → 500
+      le flux est ensuite annulé ; LND poursuit la fermeture seul
+  ← succès : 200 JSON {"closingTxId"} ; HTMX : toast "Channel closing, tx <8 premiers caractères>" ; HX-Trigger: channel-closed (aussi hors HTMX)
+    erreur métier : 400 avec message constant, sans HX-Trigger ; autre erreur : 500 "Unable to close the channel."
+```
+
+Les canaux sont lus par `GET /lightning/channels` (`grpc/lnd.Gateway.ListChannels` : `ListChannels` puis `PendingChannels`) :
+
+| Source LND | Statut | Fermable |
+|------------|--------|----------|
+| `ListChannels`, `active` vrai / faux | `active` / `inactive` | oui |
+| `PendingOpenChannels` | `pending_open` | non |
+| `WaitingCloseChannels` | `closing` (transaction de fermeture diffusée, non confirmée) | non |
+| `PendingForceClosingChannels` | `force_closing` (fermeture forcée confirmée, fonds bloqués le temps du délai CSV) | non |
+
+`PendingClosingChannels` (déprécié) est ignoré. Un point de canal que LND renvoie mais qui n'est pas parsable fait échouer la liste (500) au lieu d'être omis.
+
+Limites connues de la fermeture :
+- Le suivi s'arrête à la diffusion : le canal reste `closing` tant que la transaction n'est pas confirmée (sur simnet, il faut miner des blocs, par exemple `btcctl --simnet generate`). Le statut n'est pas suivi par SSE.
+- La fermeture coopérative attend la réponse du pair avant de répondre à la requête, et aucun timeout n'est appliqué : avec un pair muet, la requête reste ouverte.
+- Pas de `NoWait`, ni de taux de frais, de cible de confirmation ou d'adresse de livraison personnalisés. Une fermeture coopérative avec des HTLC en attente échoue côté LND (500).
+- L'état peut changer entre le pré-contrôle et la fermeture ; LND renvoie alors une erreur (500).
+- Côté frontend, la section « Channels » de `frontend/templates/node.html` charge `/api/lightning/channels` à la sélection d'un nœud et se rafraîchit sur `channel-closed`. Les boutons de fermeture (coopérative, forcée, avec confirmation `hx-confirm`) n'apparaissent que sur les canaux `active` / `inactive`.
 
 ## Exemple de flux : paiement d'une facture
 ```
