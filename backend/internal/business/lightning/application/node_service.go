@@ -91,3 +91,15 @@ func (s *NodeService) UnlockWallet(ctx context.Context, id domain.NodeID, passwo
 		return domain.ErrWalletNotLocked
 	}
 }
+
+// GetBalance returns the balances of a node whose wallet is ready.
+func (s *NodeService) GetBalance(ctx context.Context, id domain.NodeID) (domain.Balance, error) {
+	state, err := s.inspector.GetWalletState(ctx, id)
+	if err != nil {
+		return domain.Balance{}, err
+	}
+	if !state.IsReady() {
+		return domain.Balance{}, domain.ErrWalletNotReady
+	}
+	return s.wallet.GetBalance(ctx, id)
+}

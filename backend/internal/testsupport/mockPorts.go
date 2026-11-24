@@ -74,6 +74,12 @@ func (m *MockWalletGateway) Unlock(ctx context.Context, id domain.NodeID, passwo
 	return m.Called(ctx, id, password).Error(0)
 }
 
+func (m *MockWalletGateway) GetBalance(ctx context.Context, id domain.NodeID) (domain.Balance, error) {
+	args := m.Called(ctx, id)
+	b, _ := args.Get(0).(domain.Balance)
+	return b, args.Error(1)
+}
+
 // MockPaymentNotifier mocks port.PaymentNotifier.
 type MockPaymentNotifier struct{ mock.Mock }
 

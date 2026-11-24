@@ -18,7 +18,7 @@
                  ▼
 ┌─────────────────────────────────────────────────────────┐
 │          BACKEND (HTTP, Go)                             │
-│  ├─ http/lightning (nodes, channels, payments)          │
+│  ├─ http/lightning (nodes, channels, balance, payments) │
 │  ├─ http/user (demo users)                              │
 │  ├─ SSE (real-time payment events)                      │
 │  └─ client gRPC vers LND                                │

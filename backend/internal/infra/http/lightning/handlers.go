@@ -324,6 +324,31 @@ func (h *Handler) HandleListChannels(response http.ResponseWriter, request *http
 	}
 }
 
+// HandleGetBalance returns the on-chain and channel balances of a node.
+func (h *Handler) HandleGetBalance(response http.ResponseWriter, request *http.Request) {
+	id, ok := nodeIDFromRequest(response, request, "Missing or invalid node id.")
+	if !ok {
+		return
+	}
+
+	balance, err := h.nodeService.GetBalance(request.Context(), id)
+	if err != nil {
+		if errors.Is(err, domain.ErrWalletNotReady) {
+			common.FailCheck(response, request, "The wallet is not unlocked.", err)
+			return
+		}
+		common.Fail(response, request, "Unable to get the balance.", err)
+		return
+	}
+
+	dto := toBalanceDTO(balance)
+	if common.IsHTMX(request) {
+		common.HTMXResponse(response, templates, "balance.html", dto)
+	} else {
+		common.JSONResponse(response, dto)
+	}
+}
+
 // HandleCloseChannel closes a channel, cooperatively by default or by force with force=true.
 func (h *Handler) HandleCloseChannel(response http.ResponseWriter, request *http.Request) {
 	if err := request.ParseForm(); err != nil {

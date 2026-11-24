@@ -78,9 +78,9 @@ backend/
 
 | Couche | Contenu |
 |--------|---------|
-| `domain` | `NodeID` (validé : lettres, chiffres, `_`, `-`), `NodeSummary` (avec `WalletState`), `NodeInfo`, `PeerAddress` (`pubkey@host`), `Channel` (canal ouvert ou en attente : `Point`, `RemotePubKey`, `CapacitySat`, `LocalBalanceSat`, `RemoteBalanceSat`, `Status`, méthode `IsClosable`), `ChannelPoint` (`txid:index`, parsé par `ParseChannelPoint` : txid de 64 hex en minuscules, index `uint32`), `ChannelStatus` (`active`, `inactive`, `pending_open`, `closing`, `force_closing`), `PaymentUpdate`, `WalletState` (`IsReady` : `rpc_active` et `server_active`), erreurs métier (`ErrInvalidNodeID`, `ErrInvalidPeerAddress`, `ErrInvalidAmount`, `ErrInvalidChannelPoint`, `ErrChannelNotFound`, `ErrChannelNotClosable`, `ErrChannelPeerOffline`) |
-| `port` (sortants) | `NodeRepository`, `NodeInspector` (`GetSummary`, `GetWalletState`, `GetInfo`, `UpdateAppearance`), `WalletGateway` (`Unlock`), `ChannelGateway` (`AddPeer`, `OpenChannel`, `ListChannels`, `CloseChannel`), `PaymentGateway`, `PaymentProgress`, `PaymentNotifier` |
-| `application` | `NodeService` (lister, infos, URI, alias/couleur, déverrouillage du wallet), `ChannelService` (peer, ouverture, liste et fermeture de canaux, facture, paiement) |
+| `domain` | `NodeID` (validé : lettres, chiffres, `_`, `-`), `NodeSummary` (avec `WalletState`), `NodeInfo`, `PeerAddress` (`pubkey@host`), `Channel` (canal ouvert ou en attente : `Point`, `RemotePubKey`, `CapacitySat`, `LocalBalanceSat`, `RemoteBalanceSat`, `Status`, méthode `IsClosable`), `ChannelPoint` (`txid:index`, parsé par `ParseChannelPoint` : txid de 64 hex en minuscules, index `uint32`), `ChannelStatus` (`active`, `inactive`, `pending_open`, `closing`, `force_closing`), `PaymentUpdate`, `WalletState` (`IsReady` : `rpc_active` et `server_active`), `Balance` (`OnChainBalance` confirmé/non confirmé/verrouillé/réserve anchor, `ChannelBalance` local/distant/pending-open/unsettled ; `TotalSat` calculé dans le domaine), erreurs métier (`ErrWalletNotReady`, `ErrInvalidNodeID`, `ErrInvalidPeerAddress`, `ErrInvalidAmount`, `ErrInvalidChannelPoint`, `ErrChannelNotFound`, `ErrChannelNotClosable`, `ErrChannelPeerOffline`) |
+| `port` (sortants) | `NodeRepository`, `NodeInspector` (`GetSummary`, `GetWalletState`, `GetInfo`, `UpdateAppearance`), `WalletGateway` (`Unlock`, `GetBalance`), `ChannelGateway` (`AddPeer`, `OpenChannel`, `ListChannels`, `CloseChannel`), `PaymentGateway`, `PaymentProgress`, `PaymentNotifier` |
+| `application` | `NodeService` (lister, infos, URI, alias/couleur, déverrouillage du wallet, solde), `ChannelService` (peer, ouverture, liste et fermeture de canaux, facture, paiement) |
 | adaptateurs | `grpc/lnd.Gateway` implémente `NodeInspector` + `WalletGateway` + `ChannelGateway` + `PaymentGateway` ; `filesystem` → `NodeRepository` ; `sse.PaymentNotifier` → `PaymentNotifier` ; `http/lightning` appelle les services |
 
 Les erreurs de validation du métier sont des sentinelles (`errors.Is`) : le handler répond **400** pour elles et **500** pour les autres.
@@ -100,6 +100,7 @@ Les handlers répondent en HTML (fragments HTMX) si l'en-tête `HX-Request: true
 | `/lightning/wallet/unlock` | POST | déverrouiller le wallet (`id`, `password` dans le corps uniquement) ; `HX-Trigger: wallet-unlocked` si succès |
 | `/lightning/peer` | POST | connecter un peer (`id`, `uri`) |
 | `/lightning/channel` | POST | ouvrir un canal (`id`, `pubKey`, `amount`) |
+| `/lightning/balance` | GET | solde on-chain et canaux (`id`) ; JSON ou HTMX (`balance.html`) ; 400 "The wallet is not unlocked." si le wallet n'est pas prêt |
 | `/lightning/channels` | GET | lister les canaux ouverts et en attente (`id`) ; JSON ou HTMX (`channels.html`) |
 | `/lightning/channel/close` | POST | fermer un canal (`id`, `channelPoint` `txid:index`, `force` optionnel, défaut `false`) ; `HX-Trigger: channel-closed` si succès. Pré-contrôle applicatif : canal inconnu, non fermable ou pair hors ligne (fermeture coopérative) -> 400 |
 | `/lightning/invoice` | POST | créer une facture (`id`, `memo`, `amount`) |
@@ -159,6 +160,18 @@ POST /lightning/channel/close           (id, channelPoint = "txid:index", force 
   ← succès : 200 JSON {"closingTxId"} ; HTMX : toast "Channel closing, tx <8 premiers caractères>" ; HX-Trigger: channel-closed (aussi hors HTMX)
     erreur métier : 400 avec message constant, sans HX-Trigger ; autre erreur : 500 "Unable to close the channel."
 ```
+
+Le solde est lu par `GET /lightning/balance` :
+
+```
+http/lightning.HandleGetBalance → application.NodeService.GetBalance
+  → NodeInspector.GetWalletState ; état non prêt → ErrWalletNotReady (400), sans appel au gateway
+  → WalletGateway.GetBalance ← grpc/lnd.Gateway : WalletBalance puis ChannelBalance (une erreur → 500 "Unable to get the balance.")
+```
+
+Le total (`Balance.TotalSat`) = on-chain confirmé + non confirmé + local des canaux ouverts + unsettled local + pending-open local. Les fonds des canaux en cours de fermeture (limbo) ne sont pas comptés. `lockedSat` et `reservedAnchorSat` sont informatifs : ils ne sont ni ajoutés ni retranchés du total.
+
+Le fragment HTMX `balance.html` (`http/lightning/templates`) affiche trois sections (on-chain avec ₿, canaux avec ⚡, total) en `dl`/`dt`/`dd`, chiffres en police monospace. Chaque montant en sat est suivi d'une valeur approximative en BTC (`≈ X.XX BTC`, arrondie à 2 décimales par le helper de template `formatBTC`, `templates.go`). Les attributs `data-*` des montants sont inchangés ; les emoji sont décoratifs (`aria-hidden`).
 
 Les canaux sont lus par `GET /lightning/channels` (`grpc/lnd.Gateway.ListChannels` : `ListChannels` puis `PendingChannels`) :
 
