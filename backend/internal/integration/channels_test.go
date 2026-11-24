@@ -119,6 +119,20 @@ func TestChannels_List_HTMX(t *testing.T) {
 	assert.Contains(t, body, `name="force"`)
 	assert.Contains(t, body, `name="channelPoint"`)
 	assert.NotContains(t, body, "No channel")
+
+	// peer column is a row header carrying the full pubkey as title (one per channel)
+	assert.Equal(t, 3, strings.Count(body, `<th scope="row"`))
+	for _, pk := range []string{"02aabbccddeeff0011223344", "03aabbccddeeff0011223344", "04aabbccddeeff0011223344"} {
+		assert.Contains(t, body, `title="`+pk+`"`)
+	}
+	assert.NotContains(t, body, "<td title=")
+
+	// confirmation texts are kept (one pair per closable row)
+	assert.Equal(t, 2, strings.Count(body, `hx-confirm="Close this channel cooperatively?"`))
+	assert.Equal(t, 2, strings.Count(body, `hx-confirm="Force close this channel? Your funds stay locked for the CSV delay."`))
+	// labels used by the global confirm modal
+	assert.Equal(t, 2, strings.Count(body, `data-confirm-label="Close channel"`))
+	assert.Equal(t, 2, strings.Count(body, `data-confirm-label="Force close"`))
 }
 
 func TestChannels_List_HTMX_Empty(t *testing.T) {
@@ -130,6 +144,8 @@ func TestChannels_List_HTMX_Empty(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, rr.Code)
 	assert.Contains(t, rr.Body.String(), "No channel")
+	assert.Contains(t, rr.Body.String(), `colspan="6"`)
+	assert.NotContains(t, rr.Body.String(), `scope="row"`)
 	assert.NotContains(t, rr.Body.String(), "__API_PREFIX__/lightning/channel/close")
 }
 
