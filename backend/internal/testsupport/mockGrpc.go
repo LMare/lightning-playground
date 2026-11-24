@@ -112,6 +112,44 @@ func (s *PaymentStream) Recv() (*lnrpc.Payment, error) {
 	return p, nil
 }
 
+func (m *MockLightningClient) ListChannels(ctx context.Context, in *lnrpc.ListChannelsRequest, _ ...grpc.CallOption) (*lnrpc.ListChannelsResponse, error) {
+	args := m.Called(ctx, in)
+	resp, _ := args.Get(0).(*lnrpc.ListChannelsResponse)
+	return resp, args.Error(1)
+}
+
+func (m *MockLightningClient) PendingChannels(ctx context.Context, in *lnrpc.PendingChannelsRequest, _ ...grpc.CallOption) (*lnrpc.PendingChannelsResponse, error) {
+	args := m.Called(ctx, in)
+	resp, _ := args.Get(0).(*lnrpc.PendingChannelsResponse)
+	return resp, args.Error(1)
+}
+
+func (m *MockLightningClient) CloseChannel(ctx context.Context, in *lnrpc.CloseChannelRequest, _ ...grpc.CallOption) (grpc.ServerStreamingClient[lnrpc.CloseStatusUpdate], error) {
+	args := m.Called(ctx, in)
+	resp, _ := args.Get(0).(grpc.ServerStreamingClient[lnrpc.CloseStatusUpdate])
+	return resp, args.Error(1)
+}
+
+// CloseStream is a canned grpc close stream: it yields the updates then io.EOF.
+type CloseStream struct {
+	grpc.ServerStreamingClient[lnrpc.CloseStatusUpdate]
+	Updates []*lnrpc.CloseStatusUpdate
+	RecvErr error // when set, Recv returns it immediately
+	next    int
+}
+
+func (s *CloseStream) Recv() (*lnrpc.CloseStatusUpdate, error) {
+	if s.RecvErr != nil {
+		return nil, s.RecvErr
+	}
+	if s.next >= len(s.Updates) {
+		return nil, io.EOF
+	}
+	u := s.Updates[s.next]
+	s.next++
+	return u, nil
+}
+
 // GrpcClientFactoryMock hands out the given mocked LND clients for any node.
 type GrpcClientFactoryMock struct {
 	Lightning *MockLightningClient

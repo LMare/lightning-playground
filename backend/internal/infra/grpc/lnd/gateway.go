@@ -218,6 +218,110 @@ func (g *Gateway) OpenChannel(ctx context.Context, id domain.NodeID, peerPubKeyH
 	return nil
 }
 
+func (g *Gateway) ListChannels(ctx context.Context, id domain.NodeID) ([]domain.Channel, error) {
+	client, err := g.open(id)
+	if err != nil {
+		return nil, err
+	}
+	defer client.Close()
+
+	wrap := func(err error) error {
+		return exception.NewError(fmt.Sprintf("Unable to list channels of Node[%s]", id), err)
+	}
+	open, err := client.GetLightningClient().ListChannels(ctx, &lnrpc.ListChannelsRequest{})
+	if err != nil {
+		return nil, wrap(err)
+	}
+	pending, err := client.GetLightningClient().PendingChannels(ctx, &lnrpc.PendingChannelsRequest{})
+	if err != nil {
+		return nil, wrap(err)
+	}
+
+	channels := make([]domain.Channel, 0, len(open.GetChannels()))
+	add := func(rawPoint, remote string, capacity, local, remoteBal int64, status domain.ChannelStatus) error {
+		point, err := domain.ParseChannelPoint(rawPoint)
+		if err != nil {
+			return wrap(fmt.Errorf("malformed channel point %q: %w", rawPoint, err))
+		}
+		channels = append(channels, domain.Channel{Point: point, RemotePubKey: remote, CapacitySat: capacity,
+			LocalBalanceSat: local, RemoteBalanceSat: remoteBal, Status: status})
+		return nil
+	}
+	for _, c := range open.GetChannels() {
+		status := domain.ChannelInactive
+		if c.GetActive() {
+			status = domain.ChannelActive
+		}
+		if err := add(c.GetChannelPoint(), c.GetRemotePubkey(), c.GetCapacity(), c.GetLocalBalance(), c.GetRemoteBalance(), status); err != nil {
+			return nil, err
+		}
+	}
+	addPending := func(c *lnrpc.PendingChannelsResponse_PendingChannel, status domain.ChannelStatus) error {
+		return add(c.GetChannelPoint(), c.GetRemoteNodePub(), c.GetCapacity(), c.GetLocalBalance(), c.GetRemoteBalance(), status)
+	}
+	for _, c := range pending.GetPendingOpenChannels() {
+		if err := addPending(c.GetChannel(), domain.ChannelPendingOpen); err != nil {
+			return nil, err
+		}
+	}
+	for _, c := range pending.GetWaitingCloseChannels() {
+		if err := addPending(c.GetChannel(), domain.ChannelClosing); err != nil {
+			return nil, err
+		}
+	}
+	for _, c := range pending.GetPendingForceClosingChannels() {
+		if err := addPending(c.GetChannel(), domain.ChannelForceClosing); err != nil {
+			return nil, err
+		}
+	}
+	return channels, nil
+}
+
+// CloseChannel requests the close and returns the closing txid from the first update of the stream.
+// LND goes on with the close after the stream is cancelled.
+func (g *Gateway) CloseChannel(ctx context.Context, id domain.NodeID, point domain.ChannelPoint, force bool) (string, error) {
+	client, err := g.open(id)
+	if err != nil {
+		return "", err
+	}
+	defer client.Close()
+
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	stream, err := client.GetLightningClient().CloseChannel(ctx, &lnrpc.CloseChannelRequest{
+		ChannelPoint: &lnrpc.ChannelPoint{
+			FundingTxid: &lnrpc.ChannelPoint_FundingTxidStr{FundingTxidStr: point.FundingTxID},
+			OutputIndex: point.OutputIndex,
+		},
+		Force: force,
+	})
+	if err != nil {
+		return "", exception.NewError("Error on closing the channel", err)
+	}
+	update, err := stream.Recv()
+	if err != nil {
+		return "", exception.NewError("Error on closing the channel", err)
+	}
+	switch u := update.GetUpdate().(type) {
+	case *lnrpc.CloseStatusUpdate_ClosePending:
+		return txidToString(u.ClosePending.GetTxid()), nil
+	case *lnrpc.CloseStatusUpdate_ChanClose:
+		return txidToString(u.ChanClose.GetClosingTxid()), nil
+	default:
+		return "", exception.NewError("Error on closing the channel", fmt.Errorf("unexpected close update %T", u))
+	}
+}
+
+// txidToString converts raw hash bytes (internal order) to the usual reversed hex txid.
+func txidToString(raw []byte) string {
+	reversed := make([]byte, len(raw))
+	for i, b := range raw {
+		reversed[len(raw)-1-i] = b
+	}
+	return hex.EncodeToString(reversed)
+}
+
 // ---------------- PaymentGateway ----------------
 
 // invoiceExpirySeconds is the lifetime of the invoices created by the playground (5 min).

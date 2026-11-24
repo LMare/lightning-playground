@@ -89,5 +89,15 @@
 		 <div id="version" hx-get="/api/version" hx-trigger="load"></div>
 	</footer>
 
+	<dialog id="confirm-dialog" class="modal" aria-labelledby="confirm-dialog-title" aria-describedby="confirm-dialog-message">
+		<div class="modal-box">
+			<h2 id="confirm-dialog-title" class="text-lg font-semibold mb-2">Confirmation</h2>
+			<p id="confirm-dialog-message" class="mb-2"></p>
+			<form method="dialog" class="modal-action">
+				<button type="submit" value="cancel" class="border border-gray-300 p-1 rounded text-sm">Cancel</button>
+				<button type="submit" value="confirm" id="confirm-dialog-ok" class="border border-gray-300 p-1 rounded text-sm">Confirm</button>
+			</form>
+		</div>
+	</dialog>
 </body>
 </html>

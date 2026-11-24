@@ -26,6 +26,10 @@ type WalletGateway interface {
 type ChannelGateway interface {
 	AddPeer(ctx context.Context, id domain.NodeID, peer domain.PeerAddress) error
 	OpenChannel(ctx context.Context, id domain.NodeID, peerPubKeyHex string, amountSat int64) error
+	// ListChannels returns the open channels then the pending ones (open, closing, force closing).
+	ListChannels(ctx context.Context, id domain.NodeID) ([]domain.Channel, error)
+	// CloseChannel starts the close and returns the closing transaction id once LND has broadcast it.
+	CloseChannel(ctx context.Context, id domain.NodeID, point domain.ChannelPoint, force bool) (string, error)
 }
 
 // PaymentGateway is the outbound port to receive and send payments.

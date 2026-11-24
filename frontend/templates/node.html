@@ -114,6 +114,24 @@
 			</div>
 		</section>
 
+		<!-- Channels -->
+		<section style="display:none;" class="mt-6 mx-6 w-100 bg-base-100 p-4 rounded-box shadow-md node-event-container">
+			<h2 class="text-xl text-center font-semibold mb-2">⚡️ Channels ⚡️</h2>
+			<table class="table">
+				<thead><tr><th scope="col" id="channel-peer">Peer</th><th scope="col" id="channel-capacity">Capacity</th><th scope="col" id="channel-local">Local</th><th scope="col" id="channel-remote">Remote</th><th scope="col" id="channel-status">Status</th><th scope="col" id="channel-actions"><span class="sr-only">Actions</span></th></tr></thead>
+				<tbody
+					id="table-channels-body"
+					class="node-event"
+					hx-get="/api/lightning/channels"
+					hx-vals=""
+					hx-trigger="nodeSelected, channel-closed from:body"
+					hx-target="this"
+					hx-swap="innerHTML"
+					hx-on="htmx:afterSwap: enrichRgaaTableRows(this, ['channel-capacity', 'channel-local', 'channel-remote', 'channel-status', 'channel-actions'])">
+				</tbody>
+			</table>
+		</section>
+
 		<!-- Pairs -->
 		<section style="display:none;" class="mt-6 mx-6 w-100 bg-base-100 p-4 rounded-box shadow-md node-event-container">
 			<h2 class="text-xl text-center font-semibold mb-2">⚡️ Pairs ⚡️</h2>
