@@ -171,6 +171,8 @@ http/lightning.HandleGetBalance → application.NodeService.GetBalance
 
 Le total (`Balance.TotalSat`) = on-chain confirmé + non confirmé + local des canaux ouverts + unsettled local + pending-open local. Les fonds des canaux en cours de fermeture (limbo) ne sont pas comptés. `lockedSat` et `reservedAnchorSat` sont informatifs : ils ne sont ni ajoutés ni retranchés du total.
 
+Le fragment HTMX `balance.html` (`http/lightning/templates`) affiche trois sections (on-chain avec ₿, canaux avec ⚡, total) en `dl`/`dt`/`dd`, chiffres en police monospace. Chaque montant en sat est suivi d'une valeur approximative en BTC (`≈ X.XX BTC`, arrondie à 2 décimales par le helper de template `formatBTC`, `templates.go`). Les attributs `data-*` des montants sont inchangés ; les emoji sont décoratifs (`aria-hidden`).
+
 Les canaux sont lus par `GET /lightning/channels` (`grpc/lnd.Gateway.ListChannels` : `ListChannels` puis `PendingChannels`) :
 
 | Source LND | Statut | Fermable |

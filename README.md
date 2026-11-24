@@ -159,7 +159,7 @@ kubectl exec -it btcd-0 -n lightning-playground -- btcctl --simnet generate 1
   5. List the channels of a node (open and pending) in the "Channels" section and close one of them:
      cooperatively by default, or by force (the funds then stay locked for the CSV delay).
      A closing channel only completes once blocks are mined, as above.
-  6. Check the balance of a node in the "Balance" section: on-chain confirmed, unconfirmed and total, then the channel balances (local, remote, pending open, in-flight HTLCs).
+  6. Check the balance of a node in the "Balance" section: on-chain confirmed, unconfirmed and total, then the channel balances (local, remote, pending open, in-flight HTLCs). Each amount in sat also shows an approximate BTC value (2 decimals).
      The balance is refreshed when a node is selected, after a channel is closed, or with the ↻ button. The wallet must be unlocked.
 
 ### Adding lnd node (increase de replicas number)
