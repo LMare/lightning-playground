@@ -110,9 +110,10 @@ func TestChannels_List_HTMX(t *testing.T) {
 	for _, tx := range []string{chTx1 + ":0", chTx2 + ":1", chTx3 + ":2"} {
 		assert.Contains(t, body, `data-channel-point="`+tx+`"`)
 	}
-	assert.Contains(t, body, "__API_PREFIX__/lightning/channel/close")
+	assert.Contains(t, body, `hx-post="/lightning/channel/close"`)
+	assert.NotContains(t, body, "__API_PREFIX__")
 	// close forms only for the two closable rows, not for the pending one
-	assert.Equal(t, 4, strings.Count(body, "__API_PREFIX__/lightning/channel/close"))
+	assert.Equal(t, 4, strings.Count(body, `hx-post="/lightning/channel/close"`))
 	assert.Equal(t, 2, strings.Count(body, `value="`+chTx1+`:0"`))
 	assert.Equal(t, 2, strings.Count(body, `value="`+chTx2+`:1"`))
 	assert.Equal(t, 0, strings.Count(body, `value="`+chTx3+`:2"`))
@@ -146,7 +147,7 @@ func TestChannels_List_HTMX_Empty(t *testing.T) {
 	assert.Contains(t, rr.Body.String(), "No channel")
 	assert.Contains(t, rr.Body.String(), `colspan="6"`)
 	assert.NotContains(t, rr.Body.String(), `scope="row"`)
-	assert.NotContains(t, rr.Body.String(), "__API_PREFIX__/lightning/channel/close")
+	assert.NotContains(t, rr.Body.String(), `hx-post="/lightning/channel/close"`)
 }
 
 func TestChannels_List_Errors(t *testing.T) {
