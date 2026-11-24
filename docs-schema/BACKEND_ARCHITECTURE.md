@@ -176,7 +176,7 @@ Limites connues de la fermeture :
 - La fermeture coopérative attend la réponse du pair avant de répondre à la requête, et aucun timeout n'est appliqué : avec un pair muet, la requête reste ouverte.
 - Pas de `NoWait`, ni de taux de frais, de cible de confirmation ou d'adresse de livraison personnalisés. Une fermeture coopérative avec des HTLC en attente échoue côté LND (500).
 - L'état peut changer entre le pré-contrôle et la fermeture ; LND renvoie alors une erreur (500).
-- Côté frontend, la section « Channels » de `frontend/templates/node.html` charge `/api/lightning/channels` à la sélection d'un nœud et se rafraîchit sur `channel-closed`. Les boutons de fermeture (coopérative, forcée, avec confirmation `hx-confirm`) n'apparaissent que sur les canaux `active` / `inactive`.
+- Côté frontend, la section « Channels » de `frontend/templates/node.html` charge `/api/lightning/channels` à la sélection d'un nœud et se rafraîchit sur `channel-closed`. La colonne du pair est un en-tête de ligne (`<th scope="row">`). Les boutons de fermeture (coopérative, forcée) demandent confirmation dans une fenêtre modale : `hx-confirm` est intercepté par le gestionnaire global `htmx:confirm` de `frontend/asset/js/generic.js`, qui ouvre le `<dialog id="confirm-dialog">` de `layout.html`. Ces boutons n'apparaissent que sur les canaux `active` / `inactive`.
 
 ## Exemple de flux : paiement d'une facture
 ```
