@@ -1,22 +1,26 @@
-<div class="node-balance">
-	<div>
-		<h3 class="font-semibold">On-chain</h3>
-		<p>Confirmed: <span {{satAttr "data-onchain-confirmed" .OnChain.ConfirmedSat}}>{{.OnChain.ConfirmedSat}}</span> sat</p>
-		<p>Unconfirmed: <span {{satAttr "data-onchain-unconfirmed" .OnChain.UnconfirmedSat}}>{{.OnChain.UnconfirmedSat}}</span> sat</p>
-		<p>Total: <span {{satAttr "data-onchain-total" .OnChain.TotalSat}}>{{.OnChain.TotalSat}}</span> sat</p>
-		{{if gt .OnChain.LockedSat 0}}<p>Locked: {{.OnChain.LockedSat}} sat</p>{{end}}
-		{{if gt .OnChain.ReservedAnchorSat 0}}<p>Anchor reserve: {{.OnChain.ReservedAnchorSat}} sat</p>{{end}}
-	</div>
-	<div>
-		<h3 class="font-semibold">Channels</h3>
-		<p>Local: <span data-channels-local="{{.Channels.LocalSat}}">{{.Channels.LocalSat}}</span> sat</p>
-		<p>Remote: <span data-channels-remote="{{.Channels.RemoteSat}}">{{.Channels.RemoteSat}}</span> sat</p>
-		<p>Pending open (local / remote): {{.Channels.PendingOpenLocalSat}} / {{.Channels.PendingOpenRemoteSat}} sat</p>
-		<p>Unsettled (local / remote): {{.Channels.UnsettledLocalSat}} / {{.Channels.UnsettledRemoteSat}} sat</p>
-		<p>Total local: <span data-channels-total="{{.Channels.TotalLocalSat}}">{{.Channels.TotalLocalSat}}</span> sat</p>
-	</div>
-	<div>
+<div class="node-balance grid gap-3 md:grid-cols-3">
+	<section class="rounded border border-gray-200 p-3">
+		<h3 class="font-semibold"><span aria-hidden="true">₿</span> On-chain</h3>
+		<dl class="mt-2 space-y-1">
+			<div class="flex justify-between gap-2"><dt class="text-gray-600">Confirmed</dt><dd class="font-mono tabular-nums text-right"><span class="font-bold" {{satAttr "data-onchain-confirmed" .OnChain.ConfirmedSat}}>{{.OnChain.ConfirmedSat}}</span> sat <span class="text-gray-500">≈ {{formatBTC .OnChain.ConfirmedSat}} BTC</span></dd></div>
+			<div class="flex justify-between gap-2"><dt class="text-gray-600">Unconfirmed</dt><dd class="font-mono tabular-nums text-right"><span class="font-bold" {{satAttr "data-onchain-unconfirmed" .OnChain.UnconfirmedSat}}>{{.OnChain.UnconfirmedSat}}</span> sat <span class="text-gray-500">≈ {{formatBTC .OnChain.UnconfirmedSat}} BTC</span></dd></div>
+			<div class="flex justify-between gap-2"><dt class="text-gray-600">Total</dt><dd class="font-mono tabular-nums text-right"><span class="font-bold" {{satAttr "data-onchain-total" .OnChain.TotalSat}}>{{.OnChain.TotalSat}}</span> sat <span class="text-gray-500">≈ {{formatBTC .OnChain.TotalSat}} BTC</span></dd></div>
+			{{if gt .OnChain.LockedSat 0}}<div class="flex justify-between gap-2"><dt class="text-gray-600">Locked</dt><dd class="font-mono tabular-nums text-right">{{.OnChain.LockedSat}} sat</dd></div>{{end}}
+			{{if gt .OnChain.ReservedAnchorSat 0}}<div class="flex justify-between gap-2"><dt class="text-gray-600">Anchor reserve</dt><dd class="font-mono tabular-nums text-right">{{.OnChain.ReservedAnchorSat}} sat</dd></div>{{end}}
+		</dl>
+	</section>
+	<section class="rounded border border-gray-200 p-3">
+		<h3 class="font-semibold"><span aria-hidden="true">⚡</span> Channels</h3>
+		<dl class="mt-2 space-y-1">
+			<div class="flex justify-between gap-2"><dt class="text-gray-600">Local</dt><dd class="font-mono tabular-nums text-right"><span class="font-bold" data-channels-local="{{.Channels.LocalSat}}">{{.Channels.LocalSat}}</span> sat <span class="text-gray-500">≈ {{formatBTC .Channels.LocalSat}} BTC</span></dd></div>
+			<div class="flex justify-between gap-2"><dt class="text-gray-600">Remote</dt><dd class="font-mono tabular-nums text-right"><span class="font-bold" data-channels-remote="{{.Channels.RemoteSat}}">{{.Channels.RemoteSat}}</span> sat <span class="text-gray-500">≈ {{formatBTC .Channels.RemoteSat}} BTC</span></dd></div>
+			<div class="flex justify-between gap-2"><dt class="text-gray-600">Pending open (local / remote)</dt><dd class="font-mono tabular-nums text-right">{{.Channels.PendingOpenLocalSat}} / {{.Channels.PendingOpenRemoteSat}} sat</dd></div>
+			<div class="flex justify-between gap-2"><dt class="text-gray-600">Unsettled (local / remote)</dt><dd class="font-mono tabular-nums text-right">{{.Channels.UnsettledLocalSat}} / {{.Channels.UnsettledRemoteSat}} sat</dd></div>
+			<div class="flex justify-between gap-2"><dt class="text-gray-600">Total local</dt><dd class="font-mono tabular-nums text-right"><span class="font-bold" data-channels-total="{{.Channels.TotalLocalSat}}">{{.Channels.TotalLocalSat}}</span> sat <span class="text-gray-500">≈ {{formatBTC .Channels.TotalLocalSat}} BTC</span></dd></div>
+		</dl>
+	</section>
+	<section class="rounded border border-gray-200 p-3">
 		<h3 class="font-semibold">Total</h3>
-		<p><span data-total="{{.TotalSat}}">{{.TotalSat}}</span> sat</p>
-	</div>
+		<p class="mt-2 font-mono tabular-nums"><span class="font-bold" data-total="{{.TotalSat}}">{{.TotalSat}}</span> sat <span class="text-gray-500">≈ {{formatBTC .TotalSat}} BTC</span></p>
+	</section>
 </div>
