@@ -51,6 +51,8 @@ graph LR
 et les deux contextes (`lightning`, `user`) ne s'importent pas entre eux.
 Cette règle est vérifiée automatiquement par `backend/internal/archtest/architecture_test.go`.
 
+Côté HTTP, les pages de navigation (accessibles depuis le menu) sont toutes dans `infra/http/web`. Les paquets `infra/http/lightning` et `infra/http/user` ne contiennent que des ressources (fragments HTMX et JSON) et n'importent pas `web` (test `TestHTTPPagesAreSeparatedFromResources`).
+
 ## Arborescence
 ```
 backend/
@@ -62,9 +64,9 @@ backend/
       user/                 domain/  port/  application/
     infra/
       http/common/          helpers (réponses JSON/HTMX, Fail), probes, version, handler SSE
-      http/web/             layout, menu (OOB), pages d'accueil, assets statiques (go:embed, sous /asset/)
-      http/lightning/       handlers, DTO, templates HTMX embarqués (go:embed), route /node/panel
-      http/user/            handlers, DTO, view model, templates HTMX embarqués
+      http/web/             toutes les pages : render.go (Page, ActivePage, RenderPage), pages.go (/, /hello, /person, /node, /node/panel), static.go (assets sous /asset/), templates/ (layout, menu OOB, hello, nodePage, nodePanel, personPage)
+      http/lightning/       ressources uniquement : handlers, DTO, templates HTMX embarqués (balance, channels, nodes, nodeInfo, uri, paymentRequest)
+      http/user/            ressource uniquement : handlers, DTO, view model, templates (user.gohtml)
       grpc/lnd/             Gateway (client LND), fabrique de clients gRPC, résolution des connexions
       postgres/             connexion + repository des utilisateurs
       filesystem/           repository des nœuds (dossiers sous NODE_STORAGE)
@@ -106,10 +108,10 @@ Les deux listeners sont ouverts (`net.Listen`) avant le `Serve` de l'un ou l'aut
 ### Routes
 | Route | Méthode | Cas d'usage |
 |-------|---------|-------------|
-| `/`, `/hello` | GET | page d'accueil (HTML uniquement) |
-| `/node` | GET | page des nœuds (HTML uniquement, liste chargée par `hx-get="/lightning/nodes"`) |
-| `/node/panel?id=` | GET | fragment HTML du panneau d'un nœud (HTML uniquement) ; n'appelle aucun service, les sections se chargent ensuite ; `HX-Trigger: node-selected` ; id invalide → toast d'erreur |
-| `/person` | GET | page des utilisateurs (HTML uniquement) |
+| `/`, `/hello` | GET | page d'accueil (`web.HandleHome`, HTML uniquement) |
+| `/node` | GET | page des nœuds (`web.HandleNodePage`, HTML uniquement, liste chargée par `hx-get="/lightning/nodes"`) |
+| `/node/panel?id=` | GET | fragment HTML du panneau d'un nœud (`web.HandleNodePanel`, HTML uniquement) ; n'appelle aucun service, les sections se chargent ensuite ; `HX-Trigger: node-selected` ; id invalide → toast d'erreur |
+| `/person` | GET | page des utilisateurs (`web.HandlePersonPage`, HTML uniquement) |
 | `/asset/...` | GET | assets statiques embarqués (JS, CSS, images) ; pas de listing de répertoire |
 | `/lightning/nodes` | GET | liste de tous les nœuds avec l'état de leur wallet (`walletState`, libellé `walletLabel`) ; `?selected=` (HTMX) marque la ligne sélectionnée (`aria-current`) |
 | `/lightning/nodeInfo?id=` | GET | état d'un nœud |
@@ -155,7 +157,7 @@ POST /lightning/wallet/unlock          (id et password dans le corps uniquement,
   ← succès : HX-Trigger: wallet-unlocked (aussi hors HTMX) + toast de succès
     erreur : toast d'erreur sans HX-Trigger (messages constants, le mot de passe n'apparaît jamais)
 ```
-Côté interface (`lightning/templates/nodes.gohtml` et `nodePage.gohtml`), le bouton 🔓 n'apparaît que sur les nœuds `locked` et ouvre une `<dialog>` qui demande le mot de passe.
+Côté interface (`lightning/templates/nodes.gohtml` et `web/templates/nodePage.gohtml`), le bouton 🔓 n'apparaît que sur les nœuds `locked` et ouvre une `<dialog>` qui demande le mot de passe.
 La requête part directement vers `/lightning/wallet/unlock` (même origine). En cas de succès, la dialogue se ferme (événement `wallet-unlocked`, écouté dans `web/static/js/generic.js`) et la liste se rafraîchit ; tant qu'un nœud est en démarrage (`data-starting`, libellé `Starting`), la liste est rechargée toutes les 3 s jusqu'à passer à `Unlocked`. Le panneau du nœud sélectionné n'est pas rechargé après le déverrouillage : il faut cliquer à nouveau sur la ligne.
 La commande `lncli ... unlock` reste possible en parallèle. La création d'un wallet (`InitWallet`) n'est pas gérée par l'application.
 
@@ -207,7 +209,7 @@ Limites connues de la fermeture :
 - La fermeture coopérative attend la réponse du pair avant de répondre à la requête, et aucun timeout n'est appliqué : avec un pair muet, la requête reste ouverte.
 - Pas de `NoWait`, ni de taux de frais, de cible de confirmation ou d'adresse de livraison personnalisés. Une fermeture coopérative avec des HTLC en attente échoue côté LND (500).
 - L'état peut changer entre le pré-contrôle et la fermeture ; LND renvoie alors une erreur (500).
-- Côté interface, la section « Channels » du panneau (`lightning/templates/nodePanel.gohtml`) charge `/lightning/channels` à la sélection d'un nœud et se rafraîchit sur `channel-closed`. La colonne du pair est un en-tête de ligne (`<th scope="row">`), avec les ids RGAA rendus côté serveur. Les boutons de fermeture (coopérative, forcée) demandent confirmation dans une fenêtre modale : `hx-confirm` est intercepté par le gestionnaire global `htmx:confirm` de `infra/http/web/static/js/generic.js`, qui ouvre le `<dialog id="confirm-dialog">` de `web/templates/layout.gohtml`. Ces boutons n'apparaissent que sur les canaux `active` / `inactive`.
+- Côté interface, la section « Channels » du panneau (`web/templates/nodePanel.gohtml`) charge `/lightning/channels` à la sélection d'un nœud et se rafraîchit sur `channel-closed`. La colonne du pair est un en-tête de ligne (`<th scope="row">`), avec les ids RGAA rendus côté serveur. Les boutons de fermeture (coopérative, forcée) demandent confirmation dans une fenêtre modale : `hx-confirm` est intercepté par le gestionnaire global `htmx:confirm` de `infra/http/web/static/js/generic.js`, qui ouvre le `<dialog id="confirm-dialog">` de `web/templates/layout.gohtml`. Ces boutons n'apparaissent que sur les canaux `active` / `inactive`.
 
 ## Exemple de flux : paiement d'une facture
 ```
