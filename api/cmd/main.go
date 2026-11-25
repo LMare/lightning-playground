@@ -22,16 +22,16 @@ func main() {
 	executeMigrations(db)
 
 	// Bind both listeners before serving on either: /ready (ops) must not answer before the app listens.
-	appListener, err := net.Listen("tcp", ":"+cfg.BackendPort)
+	appListener, err := net.Listen("tcp", ":"+cfg.APIPort)
 	if err != nil {
 		log.Fatal("Failed to listen on the app port:", err)
 	}
-	opsListener, err := net.Listen("tcp", ":"+cfg.OpsPort)
+	opsListener, err := net.Listen("tcp", ":"+cfg.APIOpsPort)
 	if err != nil {
 		log.Fatal("Failed to listen on the ops port:", err)
 	}
 
-	fmt.Printf("Server Backend started : %s:%s (ops on :%s)\n", cfg.BackendUrl, cfg.BackendPort, cfg.OpsPort)
+	fmt.Printf("Server API started on :%s (ops on :%s)\n", cfg.APIPort, cfg.APIOpsPort)
 	go func() {
 		log.Fatal(http.Serve(opsListener, routers.Ops))
 	}()

@@ -90,7 +90,7 @@ func InitHandlers(s *services, conf *config.Config) *handlers {
 	}
 }
 
-// InitApp is the root composition entrypoint for the backend binary.
+// InitApp is the root composition entrypoint for the api binary.
 func InitApp(cfg *config.Config) (*sql.DB, Routers, error) {
 	db, err := InitDB(cfg)
 	if err != nil {

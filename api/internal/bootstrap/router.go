@@ -53,7 +53,7 @@ func newRouter(m *metrics, instrument bool) *router {
 	}
 }
 
-// Routers groups the two listeners of the backend: the application (pages, fragments, JSON,
+// Routers groups the two listeners of the API: the application (pages, fragments, JSON,
 // SSE, assets) and the ops one (probes and metrics, cluster-internal).
 type Routers struct {
 	App http.Handler

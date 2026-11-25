@@ -1,9 +1,9 @@
 
 
 services:
-  backend:
-    image: LMare/lightning-playground-backend:${APP_VERSION}
-    hostname: backend
+  api:
+    image: LMare/lightning-playground-api:${APP_VERSION}
+    hostname: api
     ports:
       - "3000:8080"   # app port only; the ops port (9090: health, ready, metrics) is not published
     depends_on:

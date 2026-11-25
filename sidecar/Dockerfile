@@ -1,5 +1,5 @@
 ### Utiliser comme ceci pour générer l'image
-### docker build -t lightning-playground-backend:latest -f backend/Dockerfile .
+### docker build -t lightning-playground-api:latest -f api/Dockerfile .
 
 ARG GO_TAG=1.25.0
 
@@ -16,7 +16,7 @@ RUN --mount=type=cache,target=/root/.cache/go-build,id=gobuild-sidecar,sharing=l
     CGO_ENABLED=0 \
     go build -o sidecar-lnd ./cmd/sidecar-lnd && \
     go build -o sidecar-btcd ./cmd/sidecar-btcd && \
-	go build -o sidecar-backend ./cmd/sidecar-backend
+	go build -o sidecar-api ./cmd/sidecar-api
 
 # 2. Construction de l'image finale
 FROM scratch

@@ -8,25 +8,25 @@ import (
 
 const namespace = "lightning-playground"
 const secretlnd = "lnd-credentials"
-const mountedBackendStorage = "/app/nodes-storage"
+const mountedAPIStorage = "/app/nodes-storage"
 
 func main() {
-	fmt.Println("[Sidecar backend] Starting")
+	fmt.Println("[Sidecar api] Starting")
 	getLndSecretAndSaveThem()
 	watchLndSecretModifiedAndSaveThem()
-	fmt.Println("[Sidecar backend] Complete -> go to sleep")
+	fmt.Println("[Sidecar api] Complete -> go to sleep")
     select {}
 }
 
 
 // Get the lnd credentials and Store them
 func getLndSecretAndSaveThem() {
-	fmt.Println("[Sidecar backend] getLndSecretAndSaveThem...")
+	fmt.Println("[Sidecar api] getLndSecretAndSaveThem...")
 	callback := &sidecar.Callback {
 	    Context : map[string]interface{} {
 			"namespace" : namespace,
 			"secretName" : secretlnd,
-			"mountedVolume" : mountedBackendStorage,
+			"mountedVolume" : mountedAPIStorage,
 		},
 		Chain : []func(*sidecar.Callback) error {
 			sidecar.ReadSecret,
@@ -35,22 +35,22 @@ func getLndSecretAndSaveThem() {
 		},
 	}
 	if err := callback.CallNext(); err != nil {
-		fmt.Println("[Sidecar backend] getLndSecretAndSaveThem... Failed !")
+		fmt.Println("[Sidecar api] getLndSecretAndSaveThem... Failed !")
 		panic("error on getLndSecretAndSaveThem : %s" + err.Error())
 	}
-	fmt.Println("[Sidecar backend] getLndSecretAndSaveThem... Done !")
+	fmt.Println("[Sidecar api] getLndSecretAndSaveThem... Done !")
 }
 
 
 
 // Get the lnd credentials and Store them
 func watchLndSecretModifiedAndSaveThem() {
-	fmt.Println("[Sidecar backend] watchLndSecretModifiedAndSaveThem...")
+	fmt.Println("[Sidecar api] watchLndSecretModifiedAndSaveThem...")
 	callback := &sidecar.Callback {
 	    Context : map[string]interface{} {
 			"namespace" : namespace,
 			"secretName" : secretlnd,
-			"mountedVolume" : mountedBackendStorage,
+			"mountedVolume" : mountedAPIStorage,
 		},
 		Chain : []func(*sidecar.Callback) error {
 			sidecar.WatchSecretModified,
@@ -59,8 +59,8 @@ func watchLndSecretModifiedAndSaveThem() {
 		},
 	}
 	if err := callback.CallNext(); err != nil {
-		fmt.Println("[Sidecar backend] watchLndSecretModifiedAndSaveThem... Failed !")
+		fmt.Println("[Sidecar api] watchLndSecretModifiedAndSaveThem... Failed !")
 		panic("error on watchLndSecretModifiedAndSaveThem : %s" + err.Error())
 	}
-	fmt.Println("[Sidecar backend] watchLndSecretModifiedAndSaveThem... Done !")
+	fmt.Println("[Sidecar api] watchLndSecretModifiedAndSaveThem... Done !")
 }
