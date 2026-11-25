@@ -1,0 +1,23 @@
+{{define "menu"}}<ul id="menu" class="menu menu-horizontal px-1" hx-target="#result"{{if .OOB}} hx-swap-oob="true"{{end}}>
+	<li>
+		<a class="flex items-center gap-2{{if eq .ActivePage "hello"}} active{{end}}"
+			hx-get="/hello"
+			hx-push-url="true">
+			👋 Hello World
+		</a>
+	</li>
+	<li>
+		<a class="flex items-center gap-2{{if eq .ActivePage "person"}} active{{end}}"
+			hx-get="/person"
+			hx-push-url="true">
+			🧑‍🤝‍🧑 Persons
+		</a>
+	</li>
+	<li>
+		<a class="flex items-center gap-2{{if eq .ActivePage "node"}} active{{end}}"
+			hx-get="/node"
+			hx-push-url="true">
+			⚡️ Lightning Node
+		</a>
+	</li>
+</ul>{{end}}

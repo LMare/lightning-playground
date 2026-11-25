@@ -6,14 +6,14 @@
 Timeline: Création de canal LND-0 → LND-1 (1 BTC)
 
 ┌─────────────────────────────────────────────────────────────┐
-│                   FRONTEND                                  │
+│                   BROWSER (UI servie par l'API)             │
 │          User clicks: "Open Channel"                         │
 │          Amount: 1 BTC                                       │
 └─────────────────┬───────────────────────────────────────────┘
                   │
                   ▼
 ┌─────────────────────────────────────────────────────────────┐
-│                   BACKEND                                   │
+│                   API                                       │
 │      Call: LND-0.OpenChannel(                               │
 │        nodeID: lnd1-pubkey,                                 │
 │        amount: 1 BTC,                                       │
@@ -75,7 +75,7 @@ Scénario: LND-0 envoie 0.1 BTC à LND-1
 
 Step 1: Create Payment Request (LND-1)
 ┌────────────────────────────────────────┐
-│ Backend calls LND-1.AddInvoice:        │
+│ API calls LND-1.AddInvoice:            │
 │  - Amount: 0.1 BTC                     │
 │  - Memo: "Payment for service"         │
 │  - Expiry: 1 hour                      │
@@ -87,7 +87,7 @@ Step 1: Create Payment Request (LND-1)
                   ▼
 Step 2: Send Payment (LND-0)
 ┌────────────────────────────────────────┐
-│ Backend calls LND-0.SendPayment:       │
+│ API calls LND-0.SendPayment:           │
 │  - PaymentRequest: lnbc100m1...        │
 │  - Amount: 0.1 BTC (converted to msat) │
 │                                        │
@@ -119,7 +119,7 @@ Step 4: Payment Confirmation
 │ Hash: preimage revealed                │
 │ HTLC (Hash Time Locked Contract) ✓     │
 │                                        │
-│ Frontend gets: Success                 │
+│ Browser gets: Success (toast)          │
 └────────────────────────────────────────┘
 
 Final State:
@@ -200,22 +200,23 @@ Penalty tx confirms first
 ```
 ┌──────────────────────────────────────────────────────────┐
 │                    USER LAYER                            │
-│              (Frontend Browser)                          │
+│        (Browser, pages et fragments HTMX de l'API)       │
 └─────────────────────────┬────────────────────────────────┘
                           │ HTTP
                           │ (JSON ou fragments HTMX)
                           ▼
 ┌──────────────────────────────────────────────────────────┐
 │                   APPLICATION LAYER                      │
-│                    (Go Backend)                          │
+│                    (Go API)                              │
 │                                                           │
 │  ┌──────────────────────────────────────────────────┐  │
 │  │ Adaptateurs HTTP (infra/http) :                  │  │
-│  │ • GET  /lightning/nodes, /nodeInfo, /uri        │  │
-│  │ • POST /lightning/peer, /channel, /invoice      │  │
-│  │ • POST /lightning/paiment (progression en SSE)  │  │
-│  │ • PUT  /lightning/alias                         │  │
-│  │ • GET  /users, /stream-event                    │  │
+│  │ • GET  /api/v1/lightning/nodes, /nodeInfo, /uri │  │
+│  │ • POST /api/v1/lightning/{peer,channel,invoice} │  │
+│  │ • POST /api/v1/lightning/payment (SSE)          │  │
+│  │ • PUT  /api/v1/lightning/alias                  │  │
+│  │ • GET  /api/v1/users, /api/v1/stream-event      │  │
+│  │ • GET  /, /node, /node/panel, /person, /asset/  │  │
 │  │ → services business/ → ports → infra/grpc/lnd   │  │
 │  └──────────────────────────────────────────────────┘  │
 └─────────┬────────────────────────────────────────────────┘
@@ -235,7 +236,7 @@ Penalty tx confirms first
     └──────────────┘
             │
             │ Both LND nodes register with Watchtower
-            │ (P2P connection, not Backend)
+            │ (P2P connection, not API)
             │
             ▼
         ┌─────┐

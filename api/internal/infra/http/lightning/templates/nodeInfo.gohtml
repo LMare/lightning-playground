@@ -1,0 +1,24 @@
+<div class="node-info" style="border-left: 4px solid {{.Info.Color}}; padding: 1em;">
+ 	<h3>Alias : {{.Info.Alias}}</h3>
+ 	<p>Network : {{.Info.Network}}</p>
+ 	<p>Block height : {{.Info.BlockHeight}}</p>
+ 	<p>Channels — Active : {{.Info.NumActiveChannels}}, Inactive : {{.Info.NumInactiveChannels}}, Pending : {{.Info.NumPendingChannels}}</p>
+ 	<p>Connected peers : {{.Info.NumPeers}}</p>
+ 	<p>Chain sync : {{if .Info.SyncedToChain}}✅{{else}}❌{{end}}</p>
+ 	<p>Graph sync : {{if .Info.SyncedToGraph}}✅{{else}}❌{{end}}</p>
+
+	<p id="alias-display" class="flex items-center gap-2 p-[5px]">
+		Alias : <span id="alias-value">{{.Info.Alias}}</span>
+		<button type="button" onclick="enableEdit()" class="text-sm" aria-label="Edit" title="edit">✏️</button>
+	</p>
+
+	<form id="edit-form" hx-put="/api/v1/lightning/alias" hx-swap="none" style="display: none;align-items: center;">
+		<input type="hidden" name="id" value="{{.NodeID}}">
+		<label for="alias-input" class="sr-only">Alias</label>
+		<input type="text" name="alias" value="{{.Info.Alias}}" id="alias-input" class="border w-[24ch] px-2 py-1 rounded" />
+		<label for="color-input" class="sr-only">Color</label>
+		<input type="color" name="color" value="{{.Info.Color}}" id="color-input" class="ml-2 w-6" />
+		<button type="submit" class="ml-2 text-sm" aria-label="Save" title="Save">💾</button>
+		<button type="button" onclick="cancelEdit()" class="ml-1 text-sm" aria-label="Cancel" title="Cancel">❌</button>
+	</form>
+</div>

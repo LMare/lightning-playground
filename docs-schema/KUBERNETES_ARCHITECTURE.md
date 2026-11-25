@@ -10,18 +10,13 @@
 │  │              Namespace: lightning-playground            │ │
 │  │                                                          │ │
 │  │  ┌─────────────────────────────────────────────────┐   │ │
-│  │  │  Frontend Deployment (1 pod)                    │   │ │
-│  │  │  ├─ Pod: frontend-xxx                           │   │ │
-│  │  │  └─ Service: frontend (ClusterIP:8000)          │   │ │
-│  │  │     └─ Ingress: frontend-ingress (HTTP 80/443)  │   │ │
-│  │  └─────────────────────────────────────────────────┘   │ │
-│  │                                                          │ │
-│  │  ┌─────────────────────────────────────────────────┐   │ │
-│  │  │  Backend Deployment (1 pod - 2 containers)      │   │ │
-│  │  │  ├─ Container: backend (gRPC :8080)             │   │ │
+│  │  │  API Deployment (1 pod - 2 containers)          │   │ │
+│  │  │  ├─ Container: api (app :8080, ops :9090)       │   │ │
 │  │  │  ├─ Container: sidecar (cert/secret mgmt)       │   │ │
 │  │  │  ├─ Volume: lnd-shared-data (emptyDir)          │   │ │
-│  │  │  └─ Service: backend (ClusterIP)                │   │ │
+│  │  │  ├─ Service: api (ClusterIP, ports api          │   │ │
+│  │  │  │   and ops)                                   │   │ │
+│  │  │  └─ Ingress: app-ingress (HTTP 80 -> api)       │   │ │
 │  │  └─────────────────────────────────────────────────┘   │ │
 │  │                                                          │ │
 │  │  ┌─────────────────────────────────────────────────┐   │ │
@@ -51,7 +46,7 @@
 │  │                                                          │ │
 │  │  ┌─────────────────────────────────────────────────┐   │ │
 │  │  │  RBAC (Role-Based Access Control)               │   │ │
-│  │  │  ├─ ServiceAccount: backend-service-account     │   │ │
+│  │  │  ├─ ServiceAccount: api-service-account         │   │ │
 │  │  │  ├─ ServiceAccount: btcd-service-account        │   │ │
 │  │  │  ├─ ServiceAccount: lnd-service-account         │   │ │
 │  │  │  ├─ Roles: pod-reader, secret-reader            │   │ │
@@ -74,8 +69,8 @@
 
 | Aspect | Docker-Compose | Kubernetes |
 |--------|---|---|
-| **Frontend** | Single container | Deployment (1 pod) + Ingress |
-| **Backend** | Single container | Deployment with sidecar (2 containers) |
+| **Interface** | Servie par l'API (port 8080, publié en 3000) | Servie par l'API, exposée par `app-ingress` (pas de service frontend) |
+| **API** | Single container | Deployment with sidecar (2 containers) |
 | **BTCD** | Service | StatefulSet + PVC (persistent blockchain) |
 | **LND** | 2 services | StatefulSet with 4 replicas (lnd-0, 1, 2, 3) |
 | **Réseau** | Docker bridge | Service DNS (lnd-0.lnd-headless.svc.cluster.local) |
@@ -89,7 +84,7 @@
 
 ### 1. **Deployment** (Stateless)
 ```yaml
-# Frontend & Backend - répliques identiques
+# API (UI + API) - répliques identiques
 kind: Deployment
 replicas: 1
 ```
@@ -113,16 +108,17 @@ replicas: 4  # lnd-0, lnd-1, lnd-2, lnd-3
 ### 3. **Service**
 ```yaml
 # Types utilisés:
-- ClusterIP (default) - frontend, backend
+- ClusterIP (default) - api (ports `api` 8080 et `ops` 9090)
 - Headless - btcd-headless, lnd-headless (DNS direct)
 ```
 
 ### 4. **Ingress**
 ```yaml
-# Expose frontend HTTP/HTTPS au monde extérieur
-frontend-ingress
+# Expose l'application (port app de l'API) au monde extérieur
+app-ingress  (host lightning-playground.local, service api, port api)
   ├─ HTTP: /
-  └─ HTTPS: /
+  └─ annotations: proxy-buffering off, proxy-read-timeout 3600 (SSE)
+# Le port ops (/health, /ready, /metrics) n'est pas routé par l'ingress
 ```
 
 ### 5. **PersistentVolumeClaim (PVC)**
@@ -136,7 +132,7 @@ frontend-ingress
 ### 6. **ServiceAccount + RBAC**
 ```yaml
 # Sécurité: Chaque service a son identité
-- backend-service-account
+- api-service-account
 - btcd-service-account
 - lnd-service-account
 
@@ -162,8 +158,8 @@ frontend-ingress
 
 ### DNS Resolution
 ```
-Backend pod appelle LND:
-  backend → lnd-0.lnd-headless.lightning-playground.svc.cluster.local:10009
+API pod appelle LND:
+  api → lnd-0.lnd-headless.lightning-playground.svc.cluster.local:10009
             ↓
   Kubernetes DNS résout en IP du pod lnd-0
             ↓
@@ -184,7 +180,7 @@ clusterIP: None  # Pas de load balancing, DNS direct
 **2. ClusterIP Service (Deployment)**
 ```yaml
 clusterIP: <auto>  # Load balancer sur pods
-# Utilisé pour: frontend, backend, lndtower
+# Utilisé pour: api, lndtower
 # Raison: Pods peuvent être remplacés, service IP reste stable
 ```
 
@@ -192,25 +188,26 @@ clusterIP: <auto>  # Load balancer sur pods
 
 ## Container Sidecars
 
-### Backend Pod (2 containers)
+### API Pod (2 containers)
 ```yaml
 containers:
-  - name: backend
-    image: LMare/lightning-playground-backend:v0.2.0-14
+  - name: api
+    image: LMare/lightning-playground-api:v0.2.0-14
     ports:
-      - containerPort: 8080  # gRPC
+      - containerPort: 8080  # app (pages, fragments, JSON, SSE, assets)
+      - containerPort: 9090  # ops (/health, /ready, /metrics)
     volumeMounts:
       - name: lnd-shared-data
         mountPath: /app/node-storage
   
   - name: sidecar
-    image: LMare/lightning-playground-sidecar-backend:v0.2.0-14
+    image: LMare/lightning-playground-sidecar-api:v0.2.0-14
     # Role: Gère les certificats/secrets LND
-    #       Partage les données avec backend via volume emptyDir
+    #       Partage les données avec l'API via volume emptyDir
 ```
 
 **Pourquoi 2 containers ?**
-- Backend: Logique application
+- API: Logique application
 - Sidecar: Gestion certificats TLS/mTLS (injection sécurisée)
 - Volume partagé: Communication inter-container
 
@@ -223,7 +220,7 @@ LND containers peuvent aussi avoir des sidecars pour les certificats.
 
 ### emptyDir (Éphémère)
 ```yaml
-# Backend deployment
+# API deployment
 volumes:
   - name: lnd-shared-data
     emptyDir: {}  # Créé à la création du pod, détruit à la suppression
@@ -264,10 +261,10 @@ volumeClaimTemplates:
 Chaque service a son identité Kubernetes :
 
 ```yaml
-# backend-service-account.yaml
+# api-service-account.yaml
 kind: ServiceAccount
 metadata:
-  name: backend-service-account
+  name: api-service-account
   namespace: lightning-playground
 
 # btcd-service-account.yaml
@@ -345,7 +342,7 @@ volumeMounts:
 
 ### Actuellement
 ```yaml
-# backend-deployment.yaml
+# api-deployment.yaml
 replicas: 1  # Pas de scalabilité horizontale
 # Raison: SSE (Server-Sent Events) nécessite un broker (Redis/Kafka)
 
@@ -355,7 +352,7 @@ replicas: 4  # Peut scaler
 # (Watchtower sera ajoutée plus tard)
 ```
 
-### Pour scaler le Backend
+### Pour scaler l'API
 ```yaml
 # Si vous ajoutiez un broker de messages:
 replicas: 3  # Plusieurs instances peuvent être déployées
@@ -388,15 +385,14 @@ replicas: 3  # Plusieurs instances peuvent être déployées
 6. Créer workloads
    kubectl apply -f btcd-statefulset.yaml
    kubectl apply -f lnd-statefulset.yaml
-   kubectl apply -f backend-deployment.yaml
-   kubectl apply -f frontend-deployment.yaml
+   kubectl apply -f api-deployment.yaml
 
 7. Créer Ingress
-   kubectl apply -f frontend-ingress.yaml
+   kubectl apply -f api-ingress.yaml
 
 8. Vérifier
    kubectl get pods -n lightning-playground
-   kubectl logs pod/backend-xxx -n lightning-playground
+   kubectl logs pod/api-xxx -n lightning-playground
 ```
 
 ---
@@ -405,11 +401,11 @@ replicas: 3  # Plusieurs instances peuvent être déployées
 
 ### Port Forwarding
 ```bash
-# Accéder au frontend (HTTP)
-kubectl port-forward service/frontend 8000:8000 -n lightning-playground
+# Accéder à l'application (UI + API, port app)
+kubectl port-forward service/api 8080:8080 -n lightning-playground
 
-# Accéder au backend (HTTP)
-kubectl port-forward service/backend 8080:8080 -n lightning-playground
+# Accéder aux sondes et métriques (port ops, interne)
+kubectl port-forward service/api 9090:9090 -n lightning-playground
 ```
 
 ### Ingress (cluster.yaml)

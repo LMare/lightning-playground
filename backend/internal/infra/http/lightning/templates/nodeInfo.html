@@ -1,9 +1,0 @@
-<div class="node-info" style="border-left: 4px solid {{.Color}}; padding: 1em;" data-alias="{{.Alias}}" data-color="{{.Color}}">
- 	<h3>Alias : {{.Alias}}</h3>
- 	<p>Network : {{.Network}}</p>
- 	<p>Block height : {{.BlockHeight}}</p>
- 	<p>Channels — Active : {{.NumActiveChannels}}, Inactive : {{.NumInactiveChannels}}, Pending : {{.NumPendingChannels}}</p>
- 	<p>Connected peers : {{.NumPeers}}</p>
- 	<p>Chain sync : {{if .SyncedToChain}}✅{{else}}❌{{end}}</p>
- 	<p>Graph sync : {{if .SyncedToGraph}}✅{{else}}❌{{end}}</p>
-</div>

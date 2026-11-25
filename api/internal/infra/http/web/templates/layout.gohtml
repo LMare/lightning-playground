@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>Lightning Playground - {{ .Title }}</title>
+	<link rel="icon" type="image/png" href="/asset/img/logo1.png" />
+	<!-- HTMX -->
+	<script src="https://unpkg.com/htmx.org@1.9.10"></script>
+	<script src="https://unpkg.com/htmx.org@1.9.10/dist/ext/sse.js"></script>
+	<!-- TailWindCss avec implémentation DaisyUI-->
+	<script src="https://cdn.tailwindcss.com"></script>
+	<link href="https://cdn.jsdelivr.net/npm/daisyui@4.5.0/dist/full.min.css" rel="stylesheet" />
+	<!-- scripts local -->
+	<script src="/asset/js/generic.js"></script>
+	<link href="/asset/css/generic.css" rel="stylesheet" />
+</head>
+<body class="bg-base-200 min-h-screen flex flex-col items-center p-6">
+
+	<header class="flex flex-col items-center w-full">
+		<!-- Toaster container -->
+		<div class="fixed top-4 right-4 z-50 max-w-sm w-full">
+			 <div id="toaster"></div>
+		</div>
+
+		<!-- TODO : mettre dans le toaster ? -->
+		<div hx-ext="sse" sse-connect="/api/v1/stream-event" >
+		  <div sse-swap="message"></div>
+		  <div sse-swap="error"></div>
+		</div>
+
+		<h1 class="text-3xl font-bold mb-6">Lightning Playground</h1>
+
+		<div class="navbar bg-base-100 rounded-box" >
+			<div class="navbar-center hidden lg:flex">
+				{{ template "menu" . }}
+			</div>
+		</div>
+	</header>
+
+	<div id="result" class="overflow-y-auto w-full flex-1">
+		{{ .Content }}
+	</div>
+
+	<!-- Footer -->
+	<footer class="footer items-center p-4 bg-base-300 text-base-content rounded-box mt-4 w-full" style="margin-top:auto;">
+		<div class="items-center grid-flow-col">
+			<img src="/asset/img/logo1.png" alt="Logo" class="w-8 h-8 mr-2">
+			<p>© 2026 Lightning Playground. MIT License. <a href="https://github.com/Lmare/lightning-playground/blob/master/LICENSE" target="_blank" class="underline">See the licence</a>.</p>
+		</div>
+		<div class="grid-flow-col gap-4 md:place-self-center md:justify-self-end">
+			<a href="https://github.com/Lmare/lightning-playground" target="_blank" class="btn btn-ghost">	GitHub</a>
+		</div>
+		 <div id="version" hx-get="/api/v1/version" hx-trigger="load"></div>
+	</footer>
+
+	<dialog id="confirm-dialog" class="modal" aria-labelledby="confirm-dialog-title" aria-describedby="confirm-dialog-message">
+		<div class="modal-box">
+			<h2 id="confirm-dialog-title" class="text-lg font-semibold mb-2">Confirmation</h2>
+			<p id="confirm-dialog-message" class="mb-2"></p>
+			<form method="dialog" class="modal-action">
+				<button type="submit" value="cancel" class="border border-gray-300 p-1 rounded text-sm">Cancel</button>
+				<button type="submit" value="confirm" id="confirm-dialog-ok" class="border border-gray-300 p-1 rounded text-sm">Confirm</button>
+			</form>
+		</div>
+	</dialog>
+</body>
+</html>

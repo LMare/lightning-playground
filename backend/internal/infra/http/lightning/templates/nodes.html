@@ -1,9 +1,0 @@
-
-{{range .}}
-	<tr data-id="{{.Id}}" data-alias="{{.Alias}}" data-color="{{.Color}}" data-wallet-state="{{.WalletState}}"{{if eq .WalletLabel "Starting"}} data-starting="true"{{end}}>
-		<th scope="row" >{{.Id}}</th>
-		<td style="color: {{.Color}}">{{.Alias}}</td>
-		<td>{{.WalletLabel}}</td>
-		<td>{{if eq .WalletState "locked"}}<button type="button" class="text-sm" aria-label="Unlock wallet" title="Unlock wallet" data-unlock-id="{{.Id}}">🔓</button>{{end}}</td>
-	</tr>
-{{end}}

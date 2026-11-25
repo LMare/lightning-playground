@@ -1,0 +1,66 @@
+# Deployement of pod api in stateless
+apiVersion: apps/v1
+kind: Deployment  # -> des pods stateless, on scale facilement
+metadata:
+  annotations:
+    author: LMare
+  labels:
+    app: api
+  name: api
+  namespace : lightning-playground
+spec:
+  replicas: 1 # SSE needs a broker (NATS, separate branch) before scaling: single hard-coded session
+  selector:
+    matchLabels:
+      app: api
+  template:
+    metadata:
+      labels:
+        app: api
+    spec:
+      enableServiceLinks: false # a Service named "api" would inject API_PORT=tcp://... and override the API_PORT env key
+      serviceAccountName: api-service-account
+      volumes:
+        - name: lnd-shared-data
+          emptyDir: {}
+      containers:
+        - name: api
+          image: LMare/lightning-playground-api:v0.3.1
+          ports:
+            - name: api-port
+              containerPort: 8080
+            - name: ops-port # /health, /ready, /metrics: cluster-internal, not behind the ingress
+              containerPort: 9090
+          volumeMounts:
+            - name: lnd-shared-data
+              mountPath: /app/node-storage
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: ops-port
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: ops-port
+            initialDelaySeconds: 5
+            periodSeconds: 10
+
+        - name: sidecar
+          image: LMare/lightning-playground-sidecar-api:v0.3.1
+          volumeMounts:
+            - name: lnd-shared-data
+              mountPath: /app/nodes-storage
+
+        - name: debug
+          image: busybox
+          command: ["sleep", "infinity"]
+          stdin: true
+          tty: true
+          volumeMounts:
+            - name: lnd-shared-data
+              mountPath: /app/node-storage
+
+
+      restartPolicy: Always

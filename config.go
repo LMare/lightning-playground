@@ -11,10 +11,8 @@ import (
 )
 
 type Config struct {
-	BackendPort     string
-	BackendUrl      string
-	FrontendPort    string
-	FrontendUrl     string
+	APIPort         string
+	APIOpsPort      string
 	ProjectPath     string
 	NodeStorage     string
 	NodeNamePattern string
@@ -37,10 +35,8 @@ func Load() *Config {
 		}
 
 		cfg = &Config{
-			BackendPort:     getEnv("BACKEND_PORT", "8080"),
-			BackendUrl:      getEnv("BACKEND_URL", "http://localhost"),
-			FrontendPort:    getEnv("FRONTEND_PORT", "8081"),
-			FrontendUrl:     getEnv("FRONTEND_URL", "http://localhost"),
+			APIPort:         getEnv("API_PORT", "8080"),
+			APIOpsPort:      getEnv("API_OPS_PORT", "9090"),
 			ProjectPath:     rootDir(),
 			NodeStorage:     getEnv("NODE_STORAGE", "/app/node-storage/"),
 			NodeNamePattern: getEnv("NODE_NAME_PATTERN", "lnd-*"),

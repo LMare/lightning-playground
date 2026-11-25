@@ -9,19 +9,13 @@
                          │
                          ▼
 ┌─────────────────────────────────────────────────────────┐
-│          FRONTEND (Port 8000)                           │
-│  ├─ HTML Templates                                      │
-│  ├─ CSS Styling                                         │
-│  └─ JavaScript (generic.js)                             │
-└────────────────┬────────────────────────────────────────┘
-                 │ HTTP
-                 ▼
-┌─────────────────────────────────────────────────────────┐
-│          BACKEND (HTTP, Go)                             │
+│          API (HTTP, Go) - port app 8080                 │
+│  ├─ pages, assets, fragments HTMX (http/web, ...)       │
 │  ├─ http/lightning (nodes, channels, balance, payments) │
 │  ├─ http/user (demo users)                              │
 │  ├─ SSE (real-time payment events)                      │
-│  └─ client gRPC vers LND                                │
+│  ├─ client gRPC vers LND                                │
+│  └─ port ops 9090 (/health, /ready, /metrics)           │
 └────────────────┬────────────────────────────────────────┘
                  │
         ┌────────┴─────────┐
@@ -48,19 +42,19 @@
 
 ## Composants principaux
 
-### 1. **Frontend**
-- Serveur web avec interface utilisateur
-- Port exposé: `FRONTEND_PORT` (default 8000)
-- Communique avec le Backend via gRPC
+### 1. **Interface web (dans l'API)**
+- Il n'y a plus de service frontend : l'API sert les pages, les assets statiques et les fragments HTMX
+- Port app: `API_PORT` (8080), publié en `3000` par docker compose et routé par l'ingress Kubernetes (`app-ingress`)
 
-### 2. **Backend**
-- Serveur d'application Go, architecture hexagonale (voir [BACKEND_ARCHITECTURE.md](BACKEND_ARCHITECTURE.md))
-- Expose une API HTTP (JSON, ou fragments HTML si la requête vient de HTMX) et un flux SSE (`/stream-event`)
+### 2. **API**
+- Serveur d'application Go, architecture hexagonale (voir [API_ARCHITECTURE.md](API_ARCHITECTURE.md))
+- Expose une API HTTP (JSON, ou fragments HTML si la requête vient de HTMX) et un flux SSE (`/api/v1/stream-event`)
+- Port ops: `API_OPS_PORT` (9090), `/health`, `/ready`, `/metrics`, interne au cluster uniquement
 - Parle gRPC (avec macaroon + TLS) aux nœuds LND ; il n'expose pas de gRPC
 - Persiste les utilisateurs de démonstration dans PostgreSQL (migrations au démarrage)
 
 ### 2 bis. **PostgreSQL**
-- Table `users` (données de démo), accessible uniquement par le backend
+- Table `users` (données de démo), accessible uniquement par l'API
 - Kubernetes : chart Bitnami (`make deploy-postgres`) ; Docker Compose : service `postgres`
 
 ### 3. **Bitcoin Network (BTCD)**
@@ -98,7 +92,7 @@ LND-0 ──(P2P 9735)──> LND-1
 
 ### Paiement sur Lightning
 ```
-User → Frontend → Backend → LND-0 ──(P2P)──> LND-1 → Destination
+User (navigateur) → API (UI + API) → LND-0 ──(P2P)──> LND-1 → Destination
                     ↓                         ↓
                   Router (payment path)    Router validation
 ```

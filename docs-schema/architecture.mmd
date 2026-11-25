@@ -1,10 +1,10 @@
 graph TD
-    subgraph "Frontend Layer"
-        FE["🌐 Frontend<br/>HTML/CSS/JS"]
+    subgraph "Browser"
+        FE["🌐 Browser<br/>HTML/CSS/JS servis par l'API"]
     end
     
-    subgraph "Backend Layer"
-        BE["⚙️ Backend<br/>Go · hexagonal"]
+    subgraph "API Layer"
+        BE["⚙️ API<br/>Go · hexagonal"]
     end
     
     subgraph "Data"
@@ -36,12 +36,12 @@ graph TD
     TOWER -->|RPC/mTLS:18556| BTCD
     
     classDef frontend fill:#FFD700,stroke:#333,stroke-width:2px
-    classDef backend fill:#87CEEB,stroke:#333,stroke-width:2px
+    classDef api fill:#87CEEB,stroke:#333,stroke-width:2px
     classDef lightning fill:#FF6B6B,stroke:#333,stroke-width:2px
     classDef bitcoin fill:#FFA500,stroke:#333,stroke-width:2px
     
     class FE frontend
-    class BE backend
+    class BE api
     class LND0,LND1,TOWER lightning
     class BTCD bitcoin
-    class PG backend
+    class PG api
