@@ -39,12 +39,14 @@ func JSONResponse(response http.ResponseWriter, objet any) {
 		fmt.Fprintf(response, "Une erreur est survenue")
 	}
 	response.Header().Set("Content-Type", "application/json")
+	response.Header().Add("Vary", "HX-Request")
 	fmt.Fprintf(response, "%s", string(objetJson))
 }
 
 // render an object in Htmx with the named template
 func HTMXResponse(response http.ResponseWriter, tmpl *template.Template, name string, viewObject any) {
 	response.Header().Set("Content-Type", "text/html")
+	response.Header().Add("Vary", "HX-Request")
 	if err := tmpl.ExecuteTemplate(response, name, viewObject); err != nil {
 		log.Printf("[ERROR] rendering template %s: %v", name, err)
 	}

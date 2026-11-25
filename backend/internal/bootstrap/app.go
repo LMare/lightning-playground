@@ -2,7 +2,6 @@ package bootstrap
 
 import (
 	"database/sql"
-	"net/http"
 
 	config "github.com/Lmare/lightning-playground"
 	lightningapp "github.com/Lmare/lightning-playground/backend/internal/business/lightning/application"
@@ -14,6 +13,7 @@ import (
 	"github.com/Lmare/lightning-playground/backend/internal/infra/http/common"
 	lightninghttp "github.com/Lmare/lightning-playground/backend/internal/infra/http/lightning"
 	userhttp "github.com/Lmare/lightning-playground/backend/internal/infra/http/user"
+	"github.com/Lmare/lightning-playground/backend/internal/infra/http/web"
 	"github.com/Lmare/lightning-playground/backend/internal/infra/postgres"
 	userpostgres "github.com/Lmare/lightning-playground/backend/internal/infra/postgres"
 	sse "github.com/Lmare/lightning-playground/backend/internal/infra/sse"
@@ -43,6 +43,7 @@ type handlers struct {
 	probe       *common.ProbeHandler
 	version     *common.VersionHandler
 	streamEvent *common.StreamHandler
+	web         *web.Handler
 }
 
 // ------------------- Initialization functions -------------------
@@ -85,18 +86,19 @@ func InitHandlers(s *services, conf *config.Config) *handlers {
 		probe:       common.NewProbeHandler(),
 		version:     common.NewVersionHandler(conf.Version),
 		streamEvent: common.NewStreamHandler(),
+		web:         web.NewHandler(),
 	}
 }
 
 // InitApp is the root composition entrypoint for the backend binary.
-func InitApp(cfg *config.Config) (*sql.DB, http.Handler, error) {
+func InitApp(cfg *config.Config) (*sql.DB, Routers, error) {
 	db, err := InitDB(cfg)
 	if err != nil {
-		return nil, nil, exception.NewError("Failed to initialize database", err)
+		return nil, Routers{}, exception.NewError("Failed to initialize database", err)
 	}
 	repos := InitRepositories(db, cfg)
 	factories := InitFactories()
 	services := InitServices(repos, factories, cfg)
 	handlers := InitHandlers(services, cfg)
-	return db, InitRouter(handlers), nil
+	return db, InitRouters(handlers), nil
 }

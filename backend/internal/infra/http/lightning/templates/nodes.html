@@ -1,9 +1,8 @@
-
-{{range .}}
-	<tr data-id="{{.Id}}" data-alias="{{.Alias}}" data-color="{{.Color}}" data-wallet-state="{{.WalletState}}"{{if eq .WalletLabel "Starting"}} data-starting="true"{{end}}>
-		<th scope="row" >{{.Id}}</th>
-		<td style="color: {{.Color}}">{{.Alias}}</td>
-		<td>{{.WalletLabel}}</td>
-		<td>{{if eq .WalletState "locked"}}<button type="button" class="text-sm" aria-label="Unlock wallet" title="Unlock wallet" data-unlock-id="{{.Id}}">🔓</button>{{end}}</td>
+{{$selected := .Selected}}{{range $i, $n := .Nodes}}
+	<tr data-id="{{$n.Id}}" data-wallet-state="{{$n.WalletState}}"{{if eq $n.WalletLabel "Starting"}} data-starting="true"{{end}}{{if eq $selected $n.Id}} class="selected" aria-current="true"{{end}} hx-get="/node/panel?id={{$n.Id}}" hx-target="#node-panel" hx-swap="innerHTML" hx-trigger="click, keyup[key=='Enter']" tabindex="0">
+		<th scope="row" id="table-nodes-body-row-{{$i}}">{{$n.Id}}</th>
+		<td headers="table-nodes-body-row-{{$i}} alias" style="color: {{$n.Color}}">{{$n.Alias}}</td>
+		<td headers="table-nodes-body-row-{{$i}} wallet">{{$n.WalletLabel}}</td>
+		<td headers="table-nodes-body-row-{{$i}} unlock">{{if eq $n.WalletState "locked"}}<button type="button" class="text-sm" aria-label="Unlock wallet" title="Unlock wallet" data-unlock-id="{{$n.Id}}" onclick="event.stopPropagation(); openUnlockDialog(this.dataset.unlockId)">🔓</button>{{end}}</td>
 	</tr>
 {{end}}

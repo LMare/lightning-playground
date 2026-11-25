@@ -5,6 +5,7 @@ import (
 
 	"github.com/Lmare/lightning-playground/backend/internal/business/user/application"
 	"github.com/Lmare/lightning-playground/backend/internal/infra/http/common"
+	"github.com/Lmare/lightning-playground/backend/internal/infra/http/web"
 )
 
 type Handler struct {
@@ -31,4 +32,9 @@ func (h *Handler) HandleListUsers(response http.ResponseWriter, request *http.Re
 	} else {
 		common.JSONResponse(response, toUserDTOs(users))
 	}
+}
+
+// HandleUsersPage renders the person page (full page or HTMX body).
+func (h *Handler) HandleUsersPage(response http.ResponseWriter, request *http.Request) {
+	web.RenderPage(response, request, web.Page{Title: "Person", ActivePage: "person"}, templates, "personPage.html", nil)
 }

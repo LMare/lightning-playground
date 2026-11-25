@@ -9,6 +9,7 @@ import (
 	"github.com/Lmare/lightning-playground/backend/internal/business/lightning/application"
 	"github.com/Lmare/lightning-playground/backend/internal/business/lightning/domain"
 	"github.com/Lmare/lightning-playground/backend/internal/infra/http/common"
+	"github.com/Lmare/lightning-playground/backend/internal/infra/http/web"
 )
 
 func NewHandler(nodeService *application.NodeService, channelService *application.ChannelService) *Handler {
@@ -83,7 +84,8 @@ func (h *Handler) HandleListOfNodes(response http.ResponseWriter, request *http.
 
 	dtos := toNodeSummaryDTOs(nodes)
 	if common.IsHTMX(request) {
-		common.HTMXResponse(response, templates, "nodes.html", dtos)
+		// "selected" is a UI-only input: the JSON output ignores it
+		common.HTMXResponse(response, templates, "nodes.html", nodesView{Selected: request.URL.Query().Get("selected"), Nodes: dtos})
 	} else {
 		common.JSONResponse(response, dtos)
 	}
@@ -149,7 +151,7 @@ func (h *Handler) HandleNodeInfo(response http.ResponseWriter, request *http.Req
 
 	dto := toNodeInfoDTO(info)
 	if common.IsHTMX(request) {
-		common.HTMXResponse(response, templates, "nodeInfo.html", dto)
+		common.HTMXResponse(response, templates, "nodeInfo.html", nodeInfoView{NodeID: id.String(), Info: dto})
 	} else {
 		common.JSONResponse(response, dto)
 	}
@@ -297,6 +299,7 @@ func (h *Handler) HandleUpdateNodeAlias(response http.ResponseWriter, request *h
 	}
 
 	if common.IsHTMX(request) {
+		response.Header().Set("HX-Trigger", "alias-updated")
 		common.HTMXMessageOk(response, "Modifications successfully applied.")
 	} else {
 		common.OkNoContent(response)
@@ -389,4 +392,20 @@ func (h *Handler) HandleCloseChannel(response http.ResponseWriter, request *http
 	default:
 		common.Fail(response, request, "Unable to close the channel.", err)
 	}
+}
+
+// HandleNodePage renders the node page (full page or HTMX body).
+func (h *Handler) HandleNodePage(response http.ResponseWriter, request *http.Request) {
+	web.RenderPage(response, request, web.Page{Title: "Node", ActivePage: "node"}, templates, "nodePage.html", nil)
+}
+
+// HandleNodePanel renders the panel of a node (sections that lazy-load, forms bound to the node).
+// HTML only and without any service call: it is UI composition, not data.
+func (h *Handler) HandleNodePanel(response http.ResponseWriter, request *http.Request) {
+	id, ok := nodeIDFromRequest(response, request, "Missing or invalid node id.")
+	if !ok {
+		return
+	}
+	response.Header().Set("HX-Trigger", "node-selected")
+	common.HTMXResponse(response, templates, "nodePanel.html", struct{ ID string }{ID: id.String()})
 }

@@ -169,3 +169,15 @@ func toBalanceDTO(b domain.Balance) balanceDTO {
 		TotalSat: b.TotalSat(),
 	}
 }
+
+// nodesView is the model of the HTMX nodes template: the rows and the node whose panel is open.
+type nodesView struct {
+	Selected string
+	Nodes    []nodeSummaryDTO
+}
+
+// nodeInfoView is the model of the HTMX nodeInfo template.
+type nodeInfoView struct {
+	NodeID string
+	Info   nodeInfoDTO
+}

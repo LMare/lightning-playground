@@ -1,8 +1,8 @@
-{{range .}}
+{{range $i, $p := .}}
 	<tr class="">
-		<th scope="row" >{{.Index}}</th>
-		<td>{{.Person.Nom}}</td>
-		<td>{{.Person.Prenom}}</td>
-		<td>{{.Person.Age}}</td>
+		<th scope="row" id="table-persons-body-row-{{$i}}">{{$p.Index}}</th>
+		<td headers="table-persons-body-row-{{$i}} nom">{{$p.Person.Nom}}</td>
+		<td headers="table-persons-body-row-{{$i}} prenom">{{$p.Person.Prenom}}</td>
+		<td headers="table-persons-body-row-{{$i}} age">{{$p.Person.Age}}</td>
 	</tr>
 {{end}}

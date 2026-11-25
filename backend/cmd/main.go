@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 
 	config "github.com/Lmare/lightning-playground"
@@ -13,13 +14,26 @@ import (
 func main() {
 	cfg := config.Load()
 	exception.ConfigureProjectBasePath(cfg.ProjectPath)
-	db, router, err := bootstrap.InitApp(cfg)
+	db, routers, err := bootstrap.InitApp(cfg)
 	if err != nil {
 		log.Fatal("Failed to initialize application:", err)
 	}
 
 	executeMigrations(db)
 
-	fmt.Printf("Server Backend started : %s:%s\n", cfg.BackendUrl, cfg.BackendPort)
-	log.Fatal(http.ListenAndServe(":"+cfg.BackendPort, router))
+	// Bind both listeners before serving on either: /ready (ops) must not answer before the app listens.
+	appListener, err := net.Listen("tcp", ":"+cfg.BackendPort)
+	if err != nil {
+		log.Fatal("Failed to listen on the app port:", err)
+	}
+	opsListener, err := net.Listen("tcp", ":"+cfg.OpsPort)
+	if err != nil {
+		log.Fatal("Failed to listen on the ops port:", err)
+	}
+
+	fmt.Printf("Server Backend started : %s:%s (ops on :%s)\n", cfg.BackendUrl, cfg.BackendPort, cfg.OpsPort)
+	go func() {
+		log.Fatal(http.Serve(opsListener, routers.Ops))
+	}()
+	log.Fatal(http.Serve(appListener, routers.App))
 }

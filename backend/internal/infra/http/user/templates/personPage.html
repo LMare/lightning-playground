@@ -5,18 +5,19 @@
 
 	<table class="table table-zebra table-sm table-bordered">
 		<thead>
-			<td></td>
-			<th scope="col" id="nom">Nom</th>
-			<th scope="col" id="prenom">Prenom</th>
-			<th scope="col" id="age">Age</th>
+			<tr>
+				<th scope="col" id="index"><span class="sr-only">#</span></th>
+				<th scope="col" id="nom">Nom</th>
+				<th scope="col" id="prenom">Prenom</th>
+				<th scope="col" id="age">Age</th>
+			</tr>
 		</thead>
 		<tbody
 			id="table-persons-body"
-			hx-get="/api/users"
+			hx-get="/users"
 			hx-trigger="load"
 			hx-target="this"
-			hx-swap="innerHTML"
-			hx-on="htmx:afterSwap: enrichRgaaTableRows(this, ['nom', 'prenom', 'age'])">
+			hx-swap="innerHTML">
 
 			<tr>
 				<td colspan="4">Chargement en cours...</td>

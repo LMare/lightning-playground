@@ -1,37 +1,6 @@
 
 
 /**
- * Add RGAA attributes on the lines of the tables.
- * columnIds lists only the <td> columns (not the row header column).
- */
-function enrichRgaaTableRows(tbody, columnIds = []) {
-	const rows = tbody.querySelectorAll("tr");
-	if (!tbody.id) {
-		console.warn("No id on the tbody", tbody);
-	}
-	const prefixId = tbody.id ? `${tbody.id}-row` : "row";
-	rows.forEach((row, rowIndex) => {
-		const th = row.querySelector("th");
-		let rowId = "";
-		if (th) {
-			rowId = `${prefixId}-${rowIndex}`;
-			th.id = rowId;
-		}
-
-		const tds = row.querySelectorAll("td");
-		tds.forEach((td, i) => {
-			if (td.hasAttribute("colspan")) {
-				return;
-			}
-			const colId = columnIds[i];
-			if (colId) {
-				td.setAttribute("headers", rowId ? `${rowId} ${colId}` : colId);
-			}
-		});
-	});
-}
-
-/**
  * Global replacement of the native confirm() used by hx-confirm:
  * shows the #confirm-dialog modal and issues the request only on confirmation.
  */
@@ -62,4 +31,15 @@ document.addEventListener("htmx:confirm", function (evt) {
 		}
 	}, { once: true });
 	dialog.showModal();
+});
+
+/**
+ * Closes the unlock dialog of the node page once a wallet is unlocked (HX-Trigger sent by the server).
+ * Registered once here, not on every navigation.
+ */
+document.addEventListener("wallet-unlocked", function () {
+	const dialog = document.getElementById("unlock-dialog");
+	if (dialog && dialog.open) {
+		dialog.close();
+	}
 });

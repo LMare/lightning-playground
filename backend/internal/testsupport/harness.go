@@ -9,7 +9,8 @@ import (
 
 // TestHarness holds components for testing the application, such as the router and mock repositories.
 type TestHarness struct {
-	Router       http.Handler
+	Router       http.Handler // application router
+	OpsRouter    http.Handler // probes and metrics
 	MockUserRepo *MockUserRepository
 	MockNodeRepo *MockNodeRepository
 	GrpcFactory  *GrpcClientFactoryMock
@@ -45,10 +46,11 @@ func NewTestHarness() *TestHarness {
 
 	services := bootstrap.InitServices(repos, factories, cfg)
 	handlers := bootstrap.InitHandlers(services, cfg)
-	router := bootstrap.InitRouter(handlers)
+	routers := bootstrap.InitRouters(handlers)
 
 	return &TestHarness{
-		Router:       router,
+		Router:       routers.App,
+		OpsRouter:    routers.Ops,
 		MockUserRepo: mockuserRepo,
 		MockNodeRepo: mockNodeRepo,
 		GrpcFactory:  grpcClientFactoryMock,

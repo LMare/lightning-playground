@@ -1,0 +1,116 @@
+<div style="display:flex; flex-direction:row; flex-wrap:wrap; justify-content:center;">
+	<div style="flex-direction: column;">
+
+		<!-- List Nodes -->
+		<section class="mt-6 mx-6 w-100 bg-base-100 p-4 rounded-box shadow-md">
+			<h2 class="text-xl text-center font-semibold mb-2">⚡️ Lightning nodes ⚡️</h2>
+			<table class="table table-zebra table-sm table-bordered">
+				<thead>
+					<tr>
+						<th scope="col" id="id">Id</th>
+						<th scope="col" id="alias">Alias</th>
+						<th scope="col" id="wallet">Wallet</th>
+						<th scope="col" id="unlock">Unlock</th>
+					</tr>
+				</thead>
+				<tbody
+					id="table-nodes-body"
+					class="cursor-pointer"
+					hx-get="/lightning/nodes"
+					hx-include="#selected-node"
+					hx-trigger="load, node-selected from:body, alias-updated from:body, wallet-unlocked from:body, every 3s [document.querySelector('#table-nodes-body tr[data-starting]')]"
+					hx-target="this"
+					hx-swap="innerHTML">
+
+					<tr>
+						<td colspan="4">Chargement en cours...</td>
+					</tr>
+				</tbody>
+			</table>
+
+		</section>
+
+
+		<!-- Unlock wallet popup -->
+		<dialog id="unlock-dialog" class="modal">
+			<div class="modal-box">
+				<h3 class="text-lg font-semibold mb-2">🔓 Unlock wallet</h3>
+				<form
+					id="unlock-form"
+					method="dialog"
+					hx-post="/lightning/wallet/unlock"
+					hx-swap="none"
+					hx-on="htmx:afterRequest: this.querySelector('input[name=password]').value = ''">
+					<input type="hidden" name="id" id="unlock-id" />
+					<label for="unlock-password" class="text-base text-gray-700">Wallet password</label>
+					<input type="password" name="password" id="unlock-password" autocomplete="current-password" required class="border px-2 py-1 rounded w-full" />
+					<div class="modal-action">
+						<button type="button" class="border border-gray-300 p-1 rounded text-sm" onclick="document.getElementById('unlock-dialog').close()">Cancel</button>
+						<button type="submit" class="border border-gray-300 p-1 rounded text-sm">Unlock</button>
+					</div>
+				</form>
+			</div>
+		</dialog>
+
+		<!-- Info of the selected node (filled out-of-band by /node/panel) -->
+		<div id="node-info-slot"></div>
+
+	</div>
+
+	<!-- Panel of the selected node (GET /node/panel) -->
+	<div id="node-panel" style="display:contents"></div>
+</div>
+
+<script>
+
+	/************************* Unlock dialog (client UI state) ****************************/
+
+	function openUnlockDialog(nodeId) {
+		document.getElementById("unlock-id").value = nodeId;
+		document.getElementById("unlock-password").value = "";
+		document.getElementById("unlock-dialog").showModal();
+	}
+
+	/************************* Edit alias (show / hide the form) ****************************/
+
+	function enableEdit() {
+		document.getElementById("alias-display").style.display = "none";
+		document.getElementById("edit-form").style.display = "flex";
+	}
+
+	function cancelEdit() {
+		document.getElementById("edit-form").style.display = "none";
+		document.getElementById("alias-display").style.display = "flex";
+	}
+
+	/*************************************** Common **********************************/
+
+	function copy(text) {
+		if (!navigator.clipboard) {
+			alert("Copy not supported on this browser.");
+			return;
+		}
+
+		navigator.clipboard.writeText(text)
+		.then(() => {
+			console.log("Copy !");
+		})
+		.catch(err => {
+			console.error("Erreur de copie :", err);
+			alert("Impossible to copy. Check the permissions or the browser.");
+		});
+	}
+
+	/*************************************** Invoice **********************************/
+	function resetInvoice() {
+		document.querySelector("#invoice-display").style.display = "none";
+		document.querySelector("#invoice-form").style.display = "block";
+		document.querySelector("#invoice-form form").reset();
+	}
+
+	function showInvoice() {
+		document.querySelector("#invoice-display").style.display = "block";
+		document.querySelector("#invoice-form").style.display = "none";
+	}
+
+</script>
