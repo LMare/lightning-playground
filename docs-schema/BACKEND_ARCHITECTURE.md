@@ -117,8 +117,8 @@ Les deux listeners sont ouverts (`net.Listen`) avant le `Serve` de l'un ou l'aut
 | `/lightning/wallet/unlock` | POST | déverrouiller le wallet (`id`, `password` dans le corps uniquement) ; `HX-Trigger: wallet-unlocked` si succès |
 | `/lightning/peer` | POST | connecter un peer (`id`, `uri`) |
 | `/lightning/channel` | POST | ouvrir un canal (`id`, `pubKey`, `amount`) |
-| `/lightning/balance` | GET | solde on-chain et canaux (`id`) ; JSON ou HTMX (`balance.html`) ; 400 "The wallet is not unlocked." si le wallet n'est pas prêt |
-| `/lightning/channels` | GET | lister les canaux ouverts et en attente (`id`) ; JSON ou HTMX (`channels.html`) |
+| `/lightning/balance` | GET | solde on-chain et canaux (`id`) ; JSON ou HTMX (`balance.gohtml`) ; 400 "The wallet is not unlocked." si le wallet n'est pas prêt |
+| `/lightning/channels` | GET | lister les canaux ouverts et en attente (`id`) ; JSON ou HTMX (`channels.gohtml`) |
 | `/lightning/channel/close` | POST | fermer un canal (`id`, `channelPoint` `txid:index`, `force` optionnel, défaut `false`) ; `HX-Trigger: channel-closed` si succès. Pré-contrôle applicatif : canal inconnu, non fermable ou pair hors ligne (fermeture coopérative) -> 400 |
 | `/lightning/invoice` | POST | créer une facture (`id`, `memo`, `amount`) |
 | `/lightning/paiment` | POST | payer une facture (`id`, `paymentRequest`), progression via SSE |
@@ -155,7 +155,7 @@ POST /lightning/wallet/unlock          (id et password dans le corps uniquement,
   ← succès : HX-Trigger: wallet-unlocked (aussi hors HTMX) + toast de succès
     erreur : toast d'erreur sans HX-Trigger (messages constants, le mot de passe n'apparaît jamais)
 ```
-Côté interface (`lightning/templates/nodes.html` et `nodePage.html`), le bouton 🔓 n'apparaît que sur les nœuds `locked` et ouvre une `<dialog>` qui demande le mot de passe.
+Côté interface (`lightning/templates/nodes.gohtml` et `nodePage.gohtml`), le bouton 🔓 n'apparaît que sur les nœuds `locked` et ouvre une `<dialog>` qui demande le mot de passe.
 La requête part directement vers `/lightning/wallet/unlock` (même origine). En cas de succès, la dialogue se ferme (événement `wallet-unlocked`, écouté dans `web/static/js/generic.js`) et la liste se rafraîchit ; tant qu'un nœud est en démarrage (`data-starting`, libellé `Starting`), la liste est rechargée toutes les 3 s jusqu'à passer à `Unlocked`. Le panneau du nœud sélectionné n'est pas rechargé après le déverrouillage : il faut cliquer à nouveau sur la ligne.
 La commande `lncli ... unlock` reste possible en parallèle. La création d'un wallet (`InitWallet`) n'est pas gérée par l'application.
 
@@ -189,7 +189,7 @@ http/lightning.HandleGetBalance → application.NodeService.GetBalance
 
 Le total (`Balance.TotalSat`) = on-chain confirmé + non confirmé + local des canaux ouverts + unsettled local + pending-open local. Les fonds des canaux en cours de fermeture (limbo) ne sont pas comptés. `lockedSat` et `reservedAnchorSat` sont informatifs : ils ne sont ni ajoutés ni retranchés du total.
 
-Le fragment HTMX `balance.html` (`http/lightning/templates`) affiche trois sections (on-chain avec ₿, canaux avec ⚡, total) en `dl`/`dt`/`dd`, chiffres en police monospace. Chaque montant en sat est suivi d'une valeur approximative en BTC (`≈ X.XX BTC`, arrondie à 2 décimales par le helper de template `formatBTC`, `templates.go`). Les attributs `data-*` des montants sont inchangés ; les emoji sont décoratifs (`aria-hidden`).
+Le fragment HTMX `balance.gohtml` (`http/lightning/templates`) affiche trois sections (on-chain avec ₿, canaux avec ⚡, total) en `dl`/`dt`/`dd`, chiffres en police monospace. Chaque montant en sat est suivi d'une valeur approximative en BTC (`≈ X.XX BTC`, arrondie à 2 décimales par le helper de template `formatBTC`, `templates.go`). Les attributs `data-*` des montants sont inchangés ; les emoji sont décoratifs (`aria-hidden`).
 
 Les canaux sont lus par `GET /lightning/channels` (`grpc/lnd.Gateway.ListChannels` : `ListChannels` puis `PendingChannels`) :
 
@@ -207,7 +207,7 @@ Limites connues de la fermeture :
 - La fermeture coopérative attend la réponse du pair avant de répondre à la requête, et aucun timeout n'est appliqué : avec un pair muet, la requête reste ouverte.
 - Pas de `NoWait`, ni de taux de frais, de cible de confirmation ou d'adresse de livraison personnalisés. Une fermeture coopérative avec des HTLC en attente échoue côté LND (500).
 - L'état peut changer entre le pré-contrôle et la fermeture ; LND renvoie alors une erreur (500).
-- Côté interface, la section « Channels » du panneau (`lightning/templates/nodePanel.html`) charge `/lightning/channels` à la sélection d'un nœud et se rafraîchit sur `channel-closed`. La colonne du pair est un en-tête de ligne (`<th scope="row">`), avec les ids RGAA rendus côté serveur. Les boutons de fermeture (coopérative, forcée) demandent confirmation dans une fenêtre modale : `hx-confirm` est intercepté par le gestionnaire global `htmx:confirm` de `infra/http/web/static/js/generic.js`, qui ouvre le `<dialog id="confirm-dialog">` de `web/templates/layout.html`. Ces boutons n'apparaissent que sur les canaux `active` / `inactive`.
+- Côté interface, la section « Channels » du panneau (`lightning/templates/nodePanel.gohtml`) charge `/lightning/channels` à la sélection d'un nœud et se rafraîchit sur `channel-closed`. La colonne du pair est un en-tête de ligne (`<th scope="row">`), avec les ids RGAA rendus côté serveur. Les boutons de fermeture (coopérative, forcée) demandent confirmation dans une fenêtre modale : `hx-confirm` est intercepté par le gestionnaire global `htmx:confirm` de `infra/http/web/static/js/generic.js`, qui ouvre le `<dialog id="confirm-dialog">` de `web/templates/layout.gohtml`. Ces boutons n'apparaissent que sur les canaux `active` / `inactive`.
 
 ## Exemple de flux : paiement d'une facture
 ```
