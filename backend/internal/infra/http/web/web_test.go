@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"regexp"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -49,7 +51,30 @@ func TestRenderPage_SetsVaryAndContentType(t *testing.T) {
 	RenderPage(rr, req, Page{Title: "Ok", ActivePage: "node"}, tmpl, "ok.html", nil)
 
 	assert.Equal(t, http.StatusOK, rr.Code)
-	assert.Equal(t, "<p>ok</p>", rr.Body.String())
+	assert.True(t, strings.HasPrefix(rr.Body.String(), "<p>ok</p>"), "the page body comes first")
+	assert.Contains(t, rr.Body.String(), `id="menu"`)
+	assert.Contains(t, rr.Body.String(), `hx-swap-oob="true"`)
 	assert.Contains(t, rr.Header().Get("Content-Type"), "text/html")
 	assert.Contains(t, rr.Header().Values("Vary"), "HX-Request")
+}
+
+// The partial response appends the menu out-of-band with the current page active;
+// the full page renders the menu once, in place.
+func TestRenderPage_MenuOutOfBandOnlyForPartials(t *testing.T) {
+	tmpl := template.Must(template.New("ok.html").Parse(`<p>ok</p>`))
+	activeNode := regexp.MustCompile(`(?s)<a\s+class="[^"]*\bactive\b[^"]*"\s+hx-get="/node"`)
+
+	req := httptest.NewRequest(http.MethodGet, "/node", nil)
+	req.Header.Set("HX-Request", "true")
+	partial := httptest.NewRecorder()
+	RenderPage(partial, req, Page{Title: "Node", ActivePage: "node"}, tmpl, "ok.html", nil)
+	assert.Equal(t, 1, strings.Count(partial.Body.String(), `id="menu"`))
+	assert.Regexp(t, activeNode, partial.Body.String())
+	assert.NotContains(t, partial.Body.String(), "<!DOCTYPE")
+
+	full := httptest.NewRecorder()
+	RenderPage(full, httptest.NewRequest(http.MethodGet, "/node", nil), Page{Title: "Node", ActivePage: "node"}, tmpl, "ok.html", nil)
+	assert.Equal(t, 1, strings.Count(full.Body.String(), `id="menu"`))
+	assert.NotContains(t, full.Body.String(), "hx-swap-oob")
+	assert.Regexp(t, activeNode, full.Body.String())
 }

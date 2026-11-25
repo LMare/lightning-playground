@@ -37,8 +37,8 @@ func TestHTMX_ListUsers(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, rr.Code)
 	assert.Equal(t, "text/html", rr.Header().Get("Content-Type"))
-	assert.Contains(t, rr.Body.String(), "<td>Doe</td>")
-	assert.Contains(t, rr.Body.String(), "<td>John</td>")
+	assert.Contains(t, rr.Body.String(), ">Doe</td>")
+	assert.Contains(t, rr.Body.String(), ">John</td>")
 }
 
 func TestHTMX_ListNodes(t *testing.T) {

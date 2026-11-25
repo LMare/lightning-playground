@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	lnrpc "github.com/Lmare/lightning-playground/backend/gRPC/github.com/lightningnetwork/lnd/lnrpc"
 	"github.com/Lmare/lightning-playground/backend/internal/business/user/domain"
 	"github.com/Lmare/lightning-playground/backend/internal/testsupport"
 	"github.com/stretchr/testify/assert"
@@ -34,6 +35,16 @@ func doHistoryRestore(h *testsupport.TestHarness, path string) *httptest.Respons
 	})
 }
 
+// doOps sends a plain request to the ops router (health, ready, metrics).
+func doOps(h *testsupport.TestHarness, method, path string) *httptest.ResponseRecorder {
+	req := httptest.NewRequest(method, path, nil)
+	rr := httptest.NewRecorder()
+	h.OpsRouter.ServeHTTP(rr, req)
+	return rr
+}
+
+var menuTagRe = regexp.MustCompile(`<[^<>]*\bid="menu"[^<>]*>`)
+
 func assertFullPage(t *testing.T, rr *httptest.ResponseRecorder, title string) {
 	t.Helper()
 	assert.Equal(t, http.StatusOK, rr.Code)
@@ -41,16 +52,27 @@ func assertFullPage(t *testing.T, rr *httptest.ResponseRecorder, title string) {
 	body := rr.Body.String()
 	assert.True(t, strings.HasPrefix(body, "<!DOCTYPE html>"), "full page must start with the doctype")
 	assert.Contains(t, body, "<title>Lightning Playground - "+title+"</title>")
-	assert.Contains(t, body, `id="menu"`)
+	tags := menuTagRe.FindAllString(body, -1)
+	assert.Len(t, tags, 1, "the full page renders the menu once")
+	for _, tag := range tags {
+		assert.NotContains(t, tag, "hx-swap-oob", "the menu of a full page is not out-of-band")
+	}
 }
 
-func assertFragmentOnly(t *testing.T, rr *httptest.ResponseRecorder) {
+// assertFragmentOnly checks an HTMX page response: no layout, and the menu only as an
+// out-of-band element whose active link is activeHref.
+func assertFragmentOnly(t *testing.T, rr *httptest.ResponseRecorder, activeHref string) {
 	t.Helper()
 	assert.Equal(t, http.StatusOK, rr.Code)
 	body := rr.Body.String()
 	assert.NotContains(t, body, "<!DOCTYPE")
 	assert.NotContains(t, body, "<html")
-	assert.NotContains(t, body, `id="menu"`)
+	tags := menuTagRe.FindAllString(body, -1)
+	assert.Len(t, tags, 1, "the fragment carries the menu once, out-of-band")
+	for _, tag := range tags {
+		assert.Contains(t, tag, `hx-swap-oob="true"`)
+	}
+	assert.True(t, activeMenuLink(body, activeHref), "menu link %s must be active in the OOB menu", activeHref)
 }
 
 // activeMenuLink reports whether the menu link targeting href has the "active" class.
@@ -81,6 +103,8 @@ func TestPages_Node_FullPage(t *testing.T) {
 	assert.False(t, activeMenuLink(body, "/hello"))
 	assert.Contains(t, body, `id="table-nodes-body"`)
 	assert.Contains(t, body, `hx-get="/lightning/nodes"`)
+	assert.Contains(t, body, `id="node-panel"`)
+	assert.Contains(t, body, `id="node-info-slot"`)
 }
 
 // 2
@@ -89,7 +113,7 @@ func TestPages_Node_HTMXFragmentOnly(t *testing.T) {
 
 	rr := doHTMX(h, http.MethodGet, "/node", nil)
 
-	assertFragmentOnly(t, rr)
+	assertFragmentOnly(t, rr, "/node")
 	assert.Contains(t, rr.Body.String(), `id="table-nodes-body"`)
 }
 
@@ -126,7 +150,7 @@ func TestPages_Hello(t *testing.T) {
 		assert.True(t, activeMenuLink(full.Body.String(), "/hello"))
 
 		frag := doHTMX(h, http.MethodGet, path, nil)
-		assertFragmentOnly(t, frag)
+		assertFragmentOnly(t, frag, "/hello")
 		assert.Contains(t, frag.Body.String(), "HTMX Hello World")
 	}
 }
@@ -141,7 +165,7 @@ func TestPages_Person(t *testing.T) {
 	assert.True(t, activeMenuLink(full.Body.String(), "/person"))
 
 	frag := doHTMX(h, http.MethodGet, "/person", nil)
-	assertFragmentOnly(t, frag)
+	assertFragmentOnly(t, frag, "/person")
 	assert.Contains(t, frag.Body.String(), `hx-get="/users"`)
 }
 
@@ -155,6 +179,7 @@ func TestPages_LayoutContent(t *testing.T) {
 	assert.Contains(t, body, `hx-get="/version"`)
 	assert.Contains(t, body, `id="toaster"`)
 	assert.Contains(t, body, `id="confirm-dialog"`)
+	assert.Regexp(t, `<script[^>]*src="[^"]*htmx\.org@1\.9\.10/dist/ext/sse\.js"`, body, "sse extension must be pinned")
 	assert.Contains(t, body, `src="/asset/js/generic.js"`)
 	assert.Contains(t, body, `href="/asset/css/generic.css"`)
 }
@@ -174,25 +199,38 @@ func TestPages_NoLegacyIndirection(t *testing.T) {
 var hxLinkRe = regexp.MustCompile(`\bhx-(get|post|put|delete)="([^"]+)"`)
 var sseLinkRe = regexp.MustCompile(`\bsse-connect="([^"]+)"`)
 
-// 9: every hypermedia link rendered in a full page resolves to a registered route.
+// 9: every hypermedia link rendered in a full page or in a fragment resolves to a registered route.
 func TestPages_EveryLinkResolves(t *testing.T) {
 	h := testsupport.NewTestHarness()
-	// empty answers, only for handlers that reach their repository without prior validation
+	// answers for the fragments that are crawled and for handlers that reach their repository without prior validation
 	h.MockUserRepo.On("FindAll", mock.Anything).Return([]domain.UserModel{}, nil).Maybe()
-	h.MockNodeRepo.On("GetNodesIds").Return([]string{}, nil).Maybe()
+	h.MockNodeRepo.On("GetNodesIds").Return([]string{"lnd-0"}, nil).Maybe()
+	h.GrpcFactory.State.On("GetState", mock.Anything, mock.Anything).Return(&lnrpc.GetStateResponse{State: lnrpc.WalletState_LOCKED}, nil).Maybe()
+	h.GrpcFactory.Lightning.On("GetInfo", mock.Anything, mock.Anything).Return(&lnrpc.GetInfoResponse{Alias: "alice", Color: "#ff0000"}, nil).Maybe()
+
+	type source struct{ name, body string }
+	var sources []source
+	pages := []string{"/node", "/person", "/"}
+	for _, page := range pages {
+		sources = append(sources, source{"page " + page, doPlain(h, http.MethodGet, page, nil).Body.String()})
+	}
+	for _, frag := range []string{"/lightning/nodes", "/node/panel?id=lnd-0", "/lightning/nodeInfo?id=lnd-0"} {
+		rr := doHTMX(h, http.MethodGet, frag, nil)
+		assert.Equal(t, http.StatusOK, rr.Code, frag)
+		sources = append(sources, source{"fragment " + frag, rr.Body.String()})
+	}
 
 	seen := map[string]bool{}
-	for _, page := range []string{"/node", "/person", "/"} {
-		body := doPlain(h, http.MethodGet, page, nil).Body.String()
-		links := 0
-		for _, m := range hxLinkRe.FindAllStringSubmatch(body, -1) {
+	links := 0
+	for _, src := range sources {
+		for _, m := range hxLinkRe.FindAllStringSubmatch(src.body, -1) {
 			method := strings.ToUpper(m[1])
 			path := m[2]
 			if i := strings.IndexAny(path, "?#"); i >= 0 {
 				path = path[:i]
 			}
 			if !strings.HasPrefix(path, "/") {
-				t.Errorf("%s: link %q is not an absolute same-origin path", page, m[2])
+				t.Errorf("%s: link %q is not an absolute same-origin path", src.name, m[2])
 				continue
 			}
 			links++
@@ -208,23 +246,25 @@ func TestPages_EveryLinkResolves(t *testing.T) {
 			} else {
 				rr = doHTMX(h, method, path, url.Values{})
 			}
-			assert.NotEqual(t, http.StatusNotFound, rr.Code, "%s linked from %s is not routed", key, page)
-			assert.NotEqual(t, http.StatusMethodNotAllowed, rr.Code, "%s linked from %s has wrong method", key, page)
+			assert.NotEqual(t, http.StatusNotFound, rr.Code, "%s linked from %s is not routed", key, src.name)
+			assert.NotEqual(t, http.StatusMethodNotAllowed, rr.Code, "%s linked from %s has wrong method", key, src.name)
 		}
-		if page == "/node" {
-			assert.GreaterOrEqual(t, links, 10, "node page should expose its hx-* links")
-			for _, want := range []string{
-				"GET /lightning/nodes", "GET /lightning/nodeInfo", "GET /lightning/uri", "GET /lightning/balance",
-				"GET /lightning/channels", "POST /lightning/wallet/unlock", "PUT /lightning/alias",
-				"POST /lightning/peer", "POST /lightning/channel", "POST /lightning/invoice", "POST /lightning/paiment",
-			} {
-				assert.True(t, seen[want], "node page should link %s", want)
-			}
-		}
-		if page == "/person" {
-			assert.True(t, seen["GET /users"])
-		}
+	}
+	assert.GreaterOrEqual(t, links, 10, "the node screens should expose their hx-* links")
+	for _, want := range []string{
+		"GET /node/panel", "GET /lightning/nodes", "GET /lightning/nodeInfo", "GET /lightning/uri", "GET /lightning/balance",
+		"GET /lightning/channels", "POST /lightning/wallet/unlock", "PUT /lightning/alias",
+		"POST /lightning/peer", "POST /lightning/channel", "POST /lightning/invoice", "POST /lightning/paiment",
+		"GET /users",
+	} {
+		assert.True(t, seen[want], "the crawled screens should link %s", want)
+	}
 
+	for _, src := range sources {
+		if !strings.HasPrefix(src.name, "page ") {
+			continue
+		}
+		body := src.body
 		for _, m := range sseLinkRe.FindAllStringSubmatch(body, -1) {
 			assert.Equal(t, "/stream-event", m[1])
 			// blocking handler: run it with an already-cancelled context so it returns at once
@@ -246,7 +286,9 @@ func TestStatic_Assets(t *testing.T) {
 	js := doPlain(h, http.MethodGet, "/asset/js/generic.js", nil)
 	assert.Equal(t, http.StatusOK, js.Code)
 	assert.Contains(t, js.Header().Get("Content-Type"), "javascript")
-	assert.Contains(t, js.Body.String(), "enrichRgaaTableRows")
+	assert.Contains(t, js.Body.String(), "htmx:confirm")
+	assert.Contains(t, js.Body.String(), "wallet-unlocked")
+	assert.NotContains(t, js.Body.String(), "enrichRgaaTableRows")
 
 	css := doPlain(h, http.MethodGet, "/asset/css/generic.css", nil)
 	assert.Equal(t, http.StatusOK, css.Code)
@@ -284,6 +326,10 @@ func TestRouting_PagesAndLegacyPrefix(t *testing.T) {
 	assert.Equal(t, http.StatusMethodNotAllowed, doPlain(h, http.MethodPost, "/person", url.Values{}).Code)
 	assert.Equal(t, http.StatusNotFound, doPlain(h, http.MethodGet, "/api/lightning/nodes", nil).Code)
 	assert.Equal(t, http.StatusNotFound, doPlain(h, http.MethodGet, "/api/users", nil).Code)
+	// probes and metrics live on the ops listener only
+	for _, p := range []string{"/metrics", "/health", "/ready"} {
+		assert.Equal(t, http.StatusNotFound, doPlain(h, http.MethodGet, p, nil).Code, "%s must not be on the app router", p)
+	}
 }
 
 // 13
@@ -292,11 +338,17 @@ func TestMetrics_PagesAndStaticLabels(t *testing.T) {
 	assert.Equal(t, http.StatusOK, doPlain(h, http.MethodGet, "/node", nil).Code)
 	assert.Equal(t, http.StatusOK, doPlain(h, http.MethodGet, "/asset/js/generic.js", nil).Code)
 
-	rr := doPlain(h, http.MethodGet, "/metrics", nil)
+	// probes hit the ops router and must not be counted
+	assert.Equal(t, http.StatusOK, doOps(h, http.MethodGet, "/health").Code)
+	assert.Equal(t, http.StatusOK, doOps(h, http.MethodGet, "/ready").Code)
+
+	rr := doOps(h, http.MethodGet, "/metrics")
 
 	assert.Equal(t, http.StatusOK, rr.Code)
 	body := rr.Body.String()
 	assert.Contains(t, body, `http_requests_total{handler="/node",method="GET"} 1`)
 	assert.Contains(t, body, `handler="/asset/"`)
 	assert.NotContains(t, body, "generic.js")
+	assert.NotContains(t, body, `handler="/health"`)
+	assert.NotContains(t, body, `handler="/ready"`)
 }
