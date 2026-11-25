@@ -48,7 +48,7 @@
 
 ### 2. **Backend**
 - Serveur d'application Go, architecture hexagonale (voir [BACKEND_ARCHITECTURE.md](BACKEND_ARCHITECTURE.md))
-- Expose une API HTTP (JSON, ou fragments HTML si la requête vient de HTMX) et un flux SSE (`/stream-event`)
+- Expose une API HTTP (JSON, ou fragments HTML si la requête vient de HTMX) et un flux SSE (`/api/v1/stream-event`)
 - Port ops: `BACKEND_OPS_PORT` (9090), `/health`, `/ready`, `/metrics`, interne au cluster uniquement
 - Parle gRPC (avec macaroon + TLS) aux nœuds LND ; il n'expose pas de gRPC
 - Persiste les utilisateurs de démonstration dans PostgreSQL (migrations au démarrage)

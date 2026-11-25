@@ -211,11 +211,11 @@ Penalty tx confirms first
 │                                                           │
 │  ┌──────────────────────────────────────────────────┐  │
 │  │ Adaptateurs HTTP (infra/http) :                  │  │
-│  │ • GET  /lightning/nodes, /nodeInfo, /uri        │  │
-│  │ • POST /lightning/peer, /channel, /invoice      │  │
-│  │ • POST /lightning/paiment (progression en SSE)  │  │
-│  │ • PUT  /lightning/alias                         │  │
-│  │ • GET  /users, /stream-event                    │  │
+│  │ • GET  /api/v1/lightning/nodes, /nodeInfo, /uri │  │
+│  │ • POST /api/v1/lightning/{peer,channel,invoice} │  │
+│  │ • POST /api/v1/lightning/payment (SSE)          │  │
+│  │ • PUT  /api/v1/lightning/alias                  │  │
+│  │ • GET  /api/v1/users, /api/v1/stream-event      │  │
 │  │ • GET  /, /node, /node/panel, /person, /asset/  │  │
 │  │ → services business/ → ports → infra/grpc/lnd   │  │
 │  └──────────────────────────────────────────────────┘  │
