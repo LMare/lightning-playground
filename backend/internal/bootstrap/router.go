@@ -78,9 +78,9 @@ func initAppRouter(handlers *handlers, m *metrics) http.Handler {
 
 	router.add("/", http.MethodGet, handlers.web.HandleHome)
 	router.add("/hello", http.MethodGet, handlers.web.HandleHome)
-	router.add("/person", http.MethodGet, handlers.user.HandleUsersPage)
-	router.add("/node", http.MethodGet, handlers.lightning.HandleNodePage)
-	router.add("/node/panel", http.MethodGet, handlers.lightning.HandleNodePanel)
+	router.add("/person", http.MethodGet, handlers.web.HandlePersonPage)
+	router.add("/node", http.MethodGet, handlers.web.HandleNodePage)
+	router.add("/node/panel", http.MethodGet, handlers.web.HandleNodePanel)
 	router.addPrefix("/asset/", http.MethodGet, web.StaticHandler().ServeHTTP)
 
 	router.add("/lightning/alias", http.MethodPut, handlers.lightning.HandleUpdateNodeAlias)

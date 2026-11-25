@@ -1,14 +1,13 @@
-// Package web holds the HTML shell (layout), the static assets and the home page.
+// Package web holds every navigable page (home, node, person), the HTML shell (layout, menu)
+// and the static assets. It calls no service: pages only compose the UI.
 package web
 
 import (
 	"bytes"
 	"embed"
 	"html/template"
-	"io/fs"
 	"log"
 	"net/http"
-	"strings"
 
 	"github.com/Lmare/lightning-playground/backend/internal/infra/http/common"
 )
@@ -16,15 +15,21 @@ import (
 //go:embed templates/*.gohtml
 var templatesFS embed.FS
 
-//go:embed static
-var staticFS embed.FS
-
 var templates = template.Must(template.ParseFS(templatesFS, "templates/*.gohtml"))
+
+// ActivePage identifies the menu entry to highlight; menu.gohtml compares on these values.
+type ActivePage string
+
+const (
+	PageHello  ActivePage = "hello"
+	PagePerson ActivePage = "person"
+	PageNode   ActivePage = "node"
+)
 
 // Page describes the shell around a page body.
 type Page struct {
 	Title      string // rendered as "Lightning Playground - <Title>"
-	ActivePage string // "hello" | "person" | "node" (menu highlighting)
+	ActivePage ActivePage
 }
 
 // RenderPage executes the template `name` of tmpl with data. HTMX navigation (not a history
@@ -60,34 +65,4 @@ func RenderPage(w http.ResponseWriter, r *http.Request, page Page, tmpl *templat
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Add("Vary", "HX-Request")
 	w.Write(out.Bytes())
-}
-
-type Handler struct{}
-
-func NewHandler() *Handler { return &Handler{} }
-
-// HandleHome renders the hello page.
-func (h *Handler) HandleHome(w http.ResponseWriter, r *http.Request) {
-	RenderPage(w, r, Page{Title: "Hello", ActivePage: "hello"}, templates, "hello.gohtml", nil)
-}
-
-// StaticHandler serves the embedded assets under /asset/ (no directory listing).
-func StaticHandler() http.Handler {
-	sub, err := fs.Sub(staticFS, "static")
-	if err != nil {
-		panic(err)
-	}
-	files := http.FileServerFS(sub)
-	return http.StripPrefix("/asset/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		p := r.URL.Path
-		if p == "" || strings.HasSuffix(p, "/") {
-			http.NotFound(w, r)
-			return
-		}
-		if info, err := fs.Stat(sub, strings.TrimPrefix(p, "/")); err == nil && info.IsDir() {
-			http.NotFound(w, r)
-			return
-		}
-		files.ServeHTTP(w, r)
-	}))
 }

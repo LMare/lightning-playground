@@ -9,7 +9,6 @@ import (
 	"github.com/Lmare/lightning-playground/backend/internal/business/lightning/application"
 	"github.com/Lmare/lightning-playground/backend/internal/business/lightning/domain"
 	"github.com/Lmare/lightning-playground/backend/internal/infra/http/common"
-	"github.com/Lmare/lightning-playground/backend/internal/infra/http/web"
 )
 
 func NewHandler(nodeService *application.NodeService, channelService *application.ChannelService) *Handler {
@@ -392,20 +391,4 @@ func (h *Handler) HandleCloseChannel(response http.ResponseWriter, request *http
 	default:
 		common.Fail(response, request, "Unable to close the channel.", err)
 	}
-}
-
-// HandleNodePage renders the node page (full page or HTMX body).
-func (h *Handler) HandleNodePage(response http.ResponseWriter, request *http.Request) {
-	web.RenderPage(response, request, web.Page{Title: "Node", ActivePage: "node"}, templates, "nodePage.gohtml", nil)
-}
-
-// HandleNodePanel renders the panel of a node (sections that lazy-load, forms bound to the node).
-// HTML only and without any service call: it is UI composition, not data.
-func (h *Handler) HandleNodePanel(response http.ResponseWriter, request *http.Request) {
-	id, ok := nodeIDFromRequest(response, request, "Missing or invalid node id.")
-	if !ok {
-		return
-	}
-	response.Header().Set("HX-Trigger", "node-selected")
-	common.HTMXResponse(response, templates, "nodePanel.gohtml", struct{ ID string }{ID: id.String()})
 }
