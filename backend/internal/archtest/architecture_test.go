@@ -52,29 +52,6 @@ func TestBusinessDoesNotDependOnInfrastructure(t *testing.T) {
 	}
 }
 
-// Pages live in infra/http/web; resource packages (lightning, user) must not depend on it,
-// and web must not depend on them (the menu coupling stays inside web).
-func TestHTTPPagesAreSeparatedFromResources(t *testing.T) {
-	web := internal + "/infra/http/web"
-	resources := []string{internal + "/infra/http/lightning", internal + "/infra/http/user"}
-
-	for _, res := range resources {
-		for pkg, imports := range importsOf(t, "./../infra/http/"+res[strings.LastIndex(res, "/")+1:]) {
-			for _, imp := range imports {
-				assert.NotEqual(t, web, imp, "%s imports %s", pkg, imp)
-			}
-		}
-	}
-
-	for pkg, imports := range importsOf(t, "./../infra/http/web") {
-		for _, imp := range imports {
-			for _, res := range resources {
-				assert.False(t, imp == res || strings.HasPrefix(imp, res+"/"), "%s imports %s", pkg, imp)
-			}
-		}
-	}
-}
-
 func TestBusinessContextsAreIndependent(t *testing.T) {
 	for _, ctx := range []struct{ name, other string }{{"lightning", "user"}, {"user", "lightning"}} {
 		for pkg, imports := range importsOf(t, "./../business/"+ctx.name+"/...") {

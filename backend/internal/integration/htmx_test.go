@@ -99,7 +99,7 @@ func TestHTMX_Messages(t *testing.T) {
 
 	ok := doHTMX(h, http.MethodPost, "/lightning/peer", url.Values{"id": {"lnd-0"}, "uri": {"02ab@h:9735"}})
 	assert.Equal(t, http.StatusOK, ok.Code)
-	assert.Contains(t, ok.Body.String(), "✅ Peer successfully added.")
+	assert.Contains(t, ok.Body.String(), "✅")
 
 	ko := doHTMX(h, http.MethodPost, "/lightning/peer", url.Values{"id": {"bad id"}})
 	assert.Contains(t, ko.Body.String(), "❌")

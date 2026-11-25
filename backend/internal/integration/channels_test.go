@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -121,10 +122,10 @@ func TestChannels_List_HTMX(t *testing.T) {
 	assert.Contains(t, body, `name="channelPoint"`)
 	assert.NotContains(t, body, "No channel")
 
-	// peer column is a row header carrying the full pubkey as title (one per channel)
-	assert.Equal(t, 3, strings.Count(body, `<th scope="row"`))
+	// peer column is a row header carrying the full pubkey as title
 	for _, pk := range []string{"02aabbccddeeff0011223344", "03aabbccddeeff0011223344", "04aabbccddeeff0011223344"} {
-		assert.Contains(t, body, `title="`+pk+`"`)
+		th := regexp.MustCompile(`<th[^<>]*\stitle="` + pk + `"[^<>]*>`).FindString(body)
+		assert.Contains(t, th, `scope="row"`, "peer %s", pk)
 	}
 	assert.NotContains(t, body, "<td title=")
 

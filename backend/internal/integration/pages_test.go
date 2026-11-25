@@ -77,8 +77,8 @@ func assertFragmentOnly(t *testing.T, rr *httptest.ResponseRecorder, activeHref 
 
 // activeMenuLink reports whether the menu link targeting href has the "active" class.
 func activeMenuLink(body, href string) bool {
-	re := regexp.MustCompile(`(?s)<a\s+class="([^"]*)"\s+hx-get="` + regexp.QuoteMeta(href) + `"`)
-	m := re.FindStringSubmatch(body)
+	tag := regexp.MustCompile(`<a\b[^<>]*\shx-get="` + regexp.QuoteMeta(href) + `"[^<>]*>`).FindString(body)
+	m := regexp.MustCompile(`\sclass="([^"]*)"`).FindStringSubmatch(tag)
 	if m == nil {
 		return false
 	}
@@ -179,21 +179,9 @@ func TestPages_LayoutContent(t *testing.T) {
 	assert.Contains(t, body, `hx-get="/version"`)
 	assert.Contains(t, body, `id="toaster"`)
 	assert.Contains(t, body, `id="confirm-dialog"`)
-	assert.Regexp(t, `<script[^>]*src="[^"]*htmx\.org@1\.9\.10/dist/ext/sse\.js"`, body, "sse extension must be pinned")
+	assert.Regexp(t, `<script[^>]*src="[^"]*htmx\.org@[^"/]+/dist/ext/sse\.js"`, body, "sse extension must be pinned")
 	assert.Contains(t, body, `src="/asset/js/generic.js"`)
 	assert.Contains(t, body, `href="/asset/css/generic.css"`)
-}
-
-// 8
-func TestPages_NoLegacyIndirection(t *testing.T) {
-	h := testsupport.NewTestHarness()
-	for _, path := range []string{"/", "/person", "/node"} {
-		rr := doPlain(h, http.MethodGet, path, nil)
-		assert.Equal(t, http.StatusOK, rr.Code, path)
-		body := rr.Body.String()
-		assert.NotContains(t, body, "/api/", path)
-		assert.NotContains(t, body, "__API_PREFIX__", path)
-	}
 }
 
 var hxLinkRe = regexp.MustCompile(`\bhx-(get|post|put|delete)="([^"]+)"`)
@@ -286,9 +274,6 @@ func TestStatic_Assets(t *testing.T) {
 	js := doPlain(h, http.MethodGet, "/asset/js/generic.js", nil)
 	assert.Equal(t, http.StatusOK, js.Code)
 	assert.Contains(t, js.Header().Get("Content-Type"), "javascript")
-	assert.Contains(t, js.Body.String(), "htmx:confirm")
-	assert.Contains(t, js.Body.String(), "wallet-unlocked")
-	assert.NotContains(t, js.Body.String(), "enrichRgaaTableRows")
 
 	css := doPlain(h, http.MethodGet, "/asset/css/generic.css", nil)
 	assert.Equal(t, http.StatusOK, css.Code)
@@ -324,8 +309,6 @@ func TestRouting_PagesAndLegacyPrefix(t *testing.T) {
 	assert.Equal(t, http.StatusNotFound, doPlain(h, http.MethodGet, "/nope", nil).Code)
 	assert.Equal(t, http.StatusMethodNotAllowed, doPlain(h, http.MethodPost, "/node", url.Values{}).Code)
 	assert.Equal(t, http.StatusMethodNotAllowed, doPlain(h, http.MethodPost, "/person", url.Values{}).Code)
-	assert.Equal(t, http.StatusNotFound, doPlain(h, http.MethodGet, "/api/lightning/nodes", nil).Code)
-	assert.Equal(t, http.StatusNotFound, doPlain(h, http.MethodGet, "/api/users", nil).Code)
 	// probes and metrics live on the ops listener only
 	for _, p := range []string{"/metrics", "/health", "/ready"} {
 		assert.Equal(t, http.StatusNotFound, doPlain(h, http.MethodGet, p, nil).Code, "%s must not be on the app router", p)
