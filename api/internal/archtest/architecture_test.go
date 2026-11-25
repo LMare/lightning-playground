@@ -38,7 +38,7 @@ func TestBusinessDoesNotDependOnInfrastructure(t *testing.T) {
 		internal + "/bootstrap",
 		internal + "/testsupport",
 		module + "/api/gRPC", // generated LND protobuf types
-		module,                   // root config package (exact match only, see below)
+		module,               // root config package (exact match only, see below)
 	}
 
 	for pkg, imports := range importsOf(t, "./../business/...") {
