@@ -16,11 +16,10 @@ go test ./...                           # all tests (unit + integration)
 go test ./backend/internal/integration -run TestName -v   # single test
 go test -coverpkg=./... -coverprofile=cover.out ./... -count=1   # CI coverage run (Codecov; ignores *.pb.go and testsupport)
 
-go run ./backend/cmd      # run backend locally (needs Postgres, see below; migrations are read from ./migrations)
-go run ./cmd/frontend
+go run ./backend/cmd      # run backend locally (needs Postgres, see below; migrations are read from ./migrations); UI on :8080, ops on :9090
 
 docker buildx bake                 # build all images (docker-bake.hcl)
-docker compose up -d               # frontend on :3000
+docker compose up -d               # app (UI + API) on :3000 -> backend :8080
 make all                           # Kubernetes: bake, kind cluster, load images, postgres (helm), deploy, hosts, monitoring
 make refresh-new-version           # bump version.txt (sed across yaml/env/bake files), rebuild app images, reload, redeploy
 make check-deps                    # verify docker/kind/kubectl/buildx/helm
@@ -30,7 +29,9 @@ LND wallets must be created manually on first launch (`lncli --network=simnet cr
 
 ## Architecture
 
-Entrypoints: `backend/cmd` (backend binary: `main.go` + `migration.go`), and `cmd/{frontend,sidecar-backend,sidecar-btcd,sidecar-lnd}` (each its own image; sidecars live in `sidecar/` and handle file/Kubernetes concerns such as macaroon/cert sharing). `config.go` at the repo root is the shared env-driven `Config` (`.env`).
+Entrypoints: `backend/cmd` (backend binary: `main.go` + `migration.go`; it is the only web server: it serves the pages, the static assets, the HTMX fragments and the JSON), and `cmd/{sidecar-backend,sidecar-btcd,sidecar-lnd}` (each its own image; sidecars live in `sidecar/` and handle file/Kubernetes concerns such as macaroon/cert sharing). There is no frontend service any more. `config.go` at the repo root is the shared env-driven `Config` (`.env`).
+
+Two listeners in the backend binary: the **app** port `BACKEND_PORT` (8080; pages, `/asset/`, `/node/panel`, `/lightning/*`, `/users`, `/stream-event`, `/version`; the only one behind the ingress and published by compose) and the **ops** port `BACKEND_OPS_PORT` (9090; `/health`, `/ready`, `/metrics`; cluster-internal, not published, not exposed by the ingress). Both routers share one Prometheus registry; only the app router is instrumented.
 
 Backend (`backend/internal/`) is hexagonal, split in `business/` and `infra/` (rule: `business` never imports `infra`, `bootstrap`, `testsupport`, the LND protobuf package or root config; enforced by `archtest/architecture_test.go`):
 - `business/<context>/` with `domain/`, `port/` (outbound interfaces), `application/` (use cases, depend only on ports). Two contexts, independent from each other:
@@ -40,7 +41,7 @@ Backend (`backend/internal/`) is hexagonal, split in `business/` and `infra/` (r
   - `grpc/lnd` — `Gateway` implements the 4 LND ports; `GrpcClientFactory`/`ConnectionResolver` build the connection from config. LND protobuf types never leave this package.
   - `postgres` — `NewPostgresDB` + user repository. `filesystem` — node repository (lists node dirs under `NodeStorage`).
   - `sse` — SSE hub (sessions) + `PaymentNotifier`.
-  - `http/{common,lightning,user}` — handlers, DTOs (`dto.go`, own the json tags) and HTMX templates. Each package embeds its own `templates/` with `go:embed` and parses them once; `common` holds the shared helpers (`Fail`, `HTMXResponse`, success/error toasts), probe/version/stream handlers.
+  - `http/{common,lightning,user,web}` — handlers, DTOs (`dto.go`, own the json tags) and HTMX templates. Each package embeds its own `templates/` with `go:embed` and parses them once; `common` holds the shared helpers (`Fail`, `HTMXResponse`, `JSONResponse`, success/error toasts), probe/version/stream handlers. Same handlers serve HTML when `HX-Request` is set and JSON otherwise (`Vary: HX-Request`). `web` owns the layout, the menu (`menu.html`, sent out-of-band on fragment responses), the hello page and the static assets (`web/static`, served by `StaticHandler` under `/asset/`). `/node/panel` is handled by `lightning` (HTML only, no service call).
 - `bootstrap/` — manual composition root (`InitApp`: DB → repos → factories → services → handlers → router). Takes repos/factories as inputs so tests inject mocks.
 - `shared/exception` — app error types. `backend/gRPC/` — vendored LND `.proto` + generated stubs (regenerate with `protoc --go_out=. --go-grpc_out=.`; don't hand-edit `.pb.go`).
 - `testsupport/` + `integration/` — `NewTestHarness` assembles the real router and services with mock repos and a mock gRPC factory.

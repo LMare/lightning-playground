@@ -6,7 +6,7 @@
 Timeline: Création de canal LND-0 → LND-1 (1 BTC)
 
 ┌─────────────────────────────────────────────────────────────┐
-│                   FRONTEND                                  │
+│                   BROWSER (UI servie par le backend)        │
 │          User clicks: "Open Channel"                         │
 │          Amount: 1 BTC                                       │
 └─────────────────┬───────────────────────────────────────────┘
@@ -119,7 +119,7 @@ Step 4: Payment Confirmation
 │ Hash: preimage revealed                │
 │ HTLC (Hash Time Locked Contract) ✓     │
 │                                        │
-│ Frontend gets: Success                 │
+│ Browser gets: Success (toast)          │
 └────────────────────────────────────────┘
 
 Final State:
@@ -200,7 +200,7 @@ Penalty tx confirms first
 ```
 ┌──────────────────────────────────────────────────────────┐
 │                    USER LAYER                            │
-│              (Frontend Browser)                          │
+│        (Browser, pages et fragments HTMX du backend)     │
 └─────────────────────────┬────────────────────────────────┘
                           │ HTTP
                           │ (JSON ou fragments HTMX)
@@ -216,6 +216,7 @@ Penalty tx confirms first
 │  │ • POST /lightning/paiment (progression en SSE)  │  │
 │  │ • PUT  /lightning/alias                         │  │
 │  │ • GET  /users, /stream-event                    │  │
+│  │ • GET  /, /node, /node/panel, /person, /asset/  │  │
 │  │ → services business/ → ports → infra/grpc/lnd   │  │
 │  └──────────────────────────────────────────────────┘  │
 └─────────┬────────────────────────────────────────────────┘

@@ -8,16 +8,13 @@ graph TD
             PVLND["💾 PV: lnd-*-data<br/>~5Gi each<br/>wallets"]
         end
         
-        subgraph "Frontend Layer"
-            FE1["🌐 Frontend-0<br/>Deployment pod<br/>Port: 8000"]
-            FE2["🌐 Frontend-1<br/>Deployment pod<br/>Port: 8000"]
-            FES["🌐 Frontend Service<br/>ClusterIP<br/>LB: FE-0/1"]
-            FEI["🌐 Ingress<br/>HTTP/HTTPS<br/>Port 80/443"]
+        subgraph "Ingress Layer"
+            FEI["🌐 app-ingress<br/>HTTP/HTTPS<br/>Port 80/443<br/>(app port only)"]
         end
-        
-        subgraph "Backend Layer"
-            BE1["⚙️ Backend-0<br/>+ sidecar<br/>gRPC 8080"]
-            BE2["⚙️ Backend-1<br/>+ sidecar<br/>gRPC 8080"]
+
+        subgraph "Backend Layer (UI + API)"
+            BE1["⚙️ Backend-0<br/>+ sidecar<br/>app 8080 / ops 9090"]
+            BE2["⚙️ Backend-1<br/>+ sidecar<br/>app 8080 / ops 9090"]
             BES["🔧 Backend Service<br/>ClusterIP<br/>LB: BE-0/1"]
         end
         
@@ -35,12 +32,8 @@ graph TD
         end
     end
     
-    FEI -->|ingress 80/443| FES
-    FES --> FE1
-    FES --> FE2
-    FE1 -->|HTTP| BES
-    FE2 -->|HTTP| BES
-    
+    FEI -->|ingress 80/443| BES
+
     BES --> BE1
     BES --> BE2
     
@@ -95,7 +88,7 @@ graph TD
     classDef storage fill:#90EE90,stroke:#333,stroke-width:2px,color:#000
     classDef security fill:#DDA0DD,stroke:#333,stroke-width:2px,color:#000
     
-    class FE1,FE2,FES,FEI frontend
+    class FEI frontend
     class BE1,BE2,BES backend
     class LND0,LND1,LND2,LND3,LNDS lightning
     class BTCD0,BTCDS bitcoin

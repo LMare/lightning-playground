@@ -29,7 +29,7 @@ TODO :
   - monitoring (logs)
   - SSE with Deployement Backend broken -> need to put a broker (ex: Redis)
   - Wallet creation (`InitWallet`, still done with lncli) to be handled by the backend via gRPC `WalletUnlocker` service.
-  - Define NetworkPolicies to restrict communication paths (frontend ↔ backend ↔ LND ↔ btcd) ?
+  - Define NetworkPolicies to restrict communication paths (ingress ↔ backend ↔ LND ↔ btcd) ?
   - infra as code (Terraform + kubernetes with Kind) ?
   - LLM
 
@@ -60,6 +60,13 @@ make all
 Go to : http://localhost:3000/ (docker compose)
 
 Go to : http://lightning-playground.local/ (Kubernetes)
+
+The backend serves the web interface itself (no separate frontend service). Its app port (8080) is published as `3000` by docker compose and routed by the `app-ingress`; the ops port (9090: `/health`, `/ready`, `/metrics`) is cluster-internal and not published.
+
+**Upgrading an existing Kubernetes cluster (one time):** the `frontend` deployment, service and ingress were removed. `kubectl apply -R` does not delete removed resources, so run once:
+```bash
+kubectl delete deploy/frontend svc/frontend ingress/frontend-ingress -n lightning-playground
+```
 
 Grafana (Kubernetes) : 
 | Clé      | Valeur |

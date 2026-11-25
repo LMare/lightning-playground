@@ -8,6 +8,7 @@ graph LR
     subgraph IN["infra/http (adaptateurs entrants)"]
         HL["lightning handlers<br/>+ DTO + templates"]
         HU["user handlers<br/>+ DTO + templates"]
+        HW["web<br/>layout · menu · pages · assets"]
         HC["common<br/>probes · version · SSE handler"]
     end
 
@@ -61,13 +62,14 @@ backend/
       user/                 domain/  port/  application/
     infra/
       http/common/          helpers (réponses JSON/HTMX, Fail), probes, version, handler SSE
-      http/lightning/       handlers, DTO, templates HTMX embarqués (go:embed)
+      http/web/             layout, menu (OOB), pages d'accueil, assets statiques (go:embed, sous /asset/)
+      http/lightning/       handlers, DTO, templates HTMX embarqués (go:embed), route /node/panel
       http/user/            handlers, DTO, view model, templates HTMX embarqués
       grpc/lnd/             Gateway (client LND), fabrique de clients gRPC, résolution des connexions
       postgres/             connexion + repository des utilisateurs
       filesystem/           repository des nœuds (dossiers sous NODE_STORAGE)
       sse/                  hub SSE + PaymentNotifier
-    bootstrap/              composition root (câblage manuel) + routeur
+    bootstrap/              composition root (câblage manuel) + deux routeurs (app, ops)
     shared/exception/       AppError (file:line + chaîne de causes)
     testsupport/            mocks + TestHarness
     integration/            tests d'intégration via le vrai routeur
@@ -90,11 +92,26 @@ Exemple minimal : `UserService.List` → port `UserRepository` → `infra/postgr
 Le JSON est produit par un DTO de `infra/http/user` (le domaine n'a pas de tags JSON).
 
 ## Routes HTTP
-Les handlers répondent en HTML (fragments HTMX) si l'en-tête `HX-Request: true` est présent, sinon en JSON.
+Le backend est le seul serveur web de l'application : il sert les pages, les assets statiques, les fragments HTMX et le JSON. Il n'y a plus de service frontend.
+Les handlers répondent en HTML (fragments HTMX) si l'en-tête `HX-Request: true` est présent, sinon en JSON (réponses avec `Vary: HX-Request`). Les pages (`/`, `/hello`, `/person`, `/node`) et `/node/panel` sont HTML uniquement.
 
+### Ports
+| Port | Variable | Contenu | Exposition |
+|------|----------|---------|------------|
+| app `8080` | `BACKEND_PORT` | pages, `/asset/`, `/node/panel`, `/lightning/*`, `/users`, `/stream-event`, `/version` | compose : `3000:8080` ; ingress `app-ingress` (service `backend`, port `backend`) |
+| ops `9090` | `BACKEND_OPS_PORT` | `/health`, `/ready`, `/metrics` | interne au cluster uniquement (probes, ServiceMonitor, port `ops`) ; non publié par compose ni par l'ingress |
+
+Les deux listeners sont ouverts (`net.Listen`) avant le `Serve` de l'un ou l'autre, pour que `/ready` ne réponde pas avant que l'app écoute. Les deux routeurs partagent un registre Prometheus ; seul le routeur app compte les requêtes (`http_requests_total`), donc les sondes et les scrapes ne sont pas comptés. Sur le port app, `/health`, `/ready` et `/metrics` renvoient 404.
+
+### Routes
 | Route | Méthode | Cas d'usage |
 |-------|---------|-------------|
-| `/lightning/nodes` | GET | liste de tous les nœuds avec l'état de leur wallet (`walletState`, libellé `walletLabel`) |
+| `/`, `/hello` | GET | page d'accueil (HTML uniquement) |
+| `/node` | GET | page des nœuds (HTML uniquement, liste chargée par `hx-get="/lightning/nodes"`) |
+| `/node/panel?id=` | GET | fragment HTML du panneau d'un nœud (HTML uniquement) ; n'appelle aucun service, les sections se chargent ensuite ; `HX-Trigger: node-selected` ; id invalide → toast d'erreur |
+| `/person` | GET | page des utilisateurs (HTML uniquement) |
+| `/asset/...` | GET | assets statiques embarqués (JS, CSS, images) ; pas de listing de répertoire |
+| `/lightning/nodes` | GET | liste de tous les nœuds avec l'état de leur wallet (`walletState`, libellé `walletLabel`) ; `?selected=` (HTMX) marque la ligne sélectionnée (`aria-current`) |
 | `/lightning/nodeInfo?id=` | GET | état d'un nœud |
 | `/lightning/uri?id=` | GET | première URI publique du nœud |
 | `/lightning/wallet/unlock` | POST | déverrouiller le wallet (`id`, `password` dans le corps uniquement) ; `HX-Trigger: wallet-unlocked` si succès |
@@ -108,7 +125,8 @@ Les handlers répondent en HTML (fragments HTMX) si l'en-tête `HX-Request: true
 | `/lightning/alias` | PUT | changer alias et couleur (`id`, `alias`, `color`) |
 | `/users` | GET | liste des utilisateurs (démo) |
 | `/stream-event` | GET | flux SSE (notifications de paiement) |
-| `/health`, `/ready`, `/version`, `/metrics` | GET | sondes, version, métriques Prometheus |
+| `/version` | GET | version (port app) |
+| `/health`, `/ready`, `/metrics` | GET | sondes et métriques Prometheus (port ops `9090` uniquement) |
 
 ## Exemple de flux : liste des nœuds
 ```
@@ -137,8 +155,8 @@ POST /lightning/wallet/unlock          (id et password dans le corps uniquement,
   ← succès : HX-Trigger: wallet-unlocked (aussi hors HTMX) + toast de succès
     erreur : toast d'erreur sans HX-Trigger (messages constants, le mot de passe n'apparaît jamais)
 ```
-Côté frontend (`frontend/templates/node.html`), le bouton 🔓 n'apparaît que sur les nœuds `locked` et ouvre une `<dialog>` qui demande le mot de passe.
-La requête passe par le proxy `/api/`. En cas de succès, la dialogue se ferme et la liste se rafraîchit ; tant qu'un nœud est en démarrage (`data-starting`, libellé `Starting`), la liste est rechargée toutes les 3 s jusqu'à passer à `Unlocked`.
+Côté interface (`lightning/templates/nodes.html` et `nodePage.html`), le bouton 🔓 n'apparaît que sur les nœuds `locked` et ouvre une `<dialog>` qui demande le mot de passe.
+La requête part directement vers `/lightning/wallet/unlock` (même origine). En cas de succès, la dialogue se ferme (événement `wallet-unlocked`, écouté dans `web/static/js/generic.js`) et la liste se rafraîchit ; tant qu'un nœud est en démarrage (`data-starting`, libellé `Starting`), la liste est rechargée toutes les 3 s jusqu'à passer à `Unlocked`. Le panneau du nœud sélectionné n'est pas rechargé après le déverrouillage : il faut cliquer à nouveau sur la ligne.
 La commande `lncli ... unlock` reste possible en parallèle. La création d'un wallet (`InitWallet`) n'est pas gérée par l'application.
 
 ## Exemple de flux : fermeture d'un canal
@@ -189,7 +207,7 @@ Limites connues de la fermeture :
 - La fermeture coopérative attend la réponse du pair avant de répondre à la requête, et aucun timeout n'est appliqué : avec un pair muet, la requête reste ouverte.
 - Pas de `NoWait`, ni de taux de frais, de cible de confirmation ou d'adresse de livraison personnalisés. Une fermeture coopérative avec des HTLC en attente échoue côté LND (500).
 - L'état peut changer entre le pré-contrôle et la fermeture ; LND renvoie alors une erreur (500).
-- Côté frontend, la section « Channels » de `frontend/templates/node.html` charge `/api/lightning/channels` à la sélection d'un nœud et se rafraîchit sur `channel-closed`. La colonne du pair est un en-tête de ligne (`<th scope="row">`). Les boutons de fermeture (coopérative, forcée) demandent confirmation dans une fenêtre modale : `hx-confirm` est intercepté par le gestionnaire global `htmx:confirm` de `frontend/asset/js/generic.js`, qui ouvre le `<dialog id="confirm-dialog">` de `layout.html`. Ces boutons n'apparaissent que sur les canaux `active` / `inactive`.
+- Côté interface, la section « Channels » du panneau (`lightning/templates/nodePanel.html`) charge `/lightning/channels` à la sélection d'un nœud et se rafraîchit sur `channel-closed`. La colonne du pair est un en-tête de ligne (`<th scope="row">`), avec les ids RGAA rendus côté serveur. Les boutons de fermeture (coopérative, forcée) demandent confirmation dans une fenêtre modale : `hx-confirm` est intercepté par le gestionnaire global `htmx:confirm` de `infra/http/web/static/js/generic.js`, qui ouvre le `<dialog id="confirm-dialog">` de `web/templates/layout.html`. Ces boutons n'apparaissent que sur les canaux `active` / `inactive`.
 
 ## Exemple de flux : paiement d'une facture
 ```
@@ -220,6 +238,6 @@ dans les logs (`common.LogException`) et reste compatible avec `errors.Is` / `er
 
 Le playground tourne sur simnet et n'a pas d'authentification. Risques connus et acceptés pour la route `POST /lightning/wallet/unlock` :
 - **Pas d'authentification, de protection CSRF ni de limitation de débit.** C'est le cas de toutes les routes qui modifient l'état (`/lightning/paiment`, `/lightning/channel`, ...). Une page web ouverte dans le même navigateur peut donc envoyer des tentatives de mot de passe. Les wallets sont des wallets simnet sans valeur, et le déverrouillage ne déplace aucun fonds.
-- **Mot de passe transmis en HTTP clair** entre le navigateur et le frontend. `docker-compose.yml` publie `${FRONTEND_PORT}` sur toutes les interfaces, et l'ingress Kubernetes n'a pas de section `tls:`. Ne pas exposer l'application en dehors de la machine locale.
+- **Mot de passe transmis en HTTP clair** entre le navigateur et le backend. `docker-compose.yml` publie `3000:8080` (port app) sur toutes les interfaces, et l'ingress Kubernetes n'a pas de section `tls:`. Ne pas exposer l'application en dehors de la machine locale.
 - **Mot de passe conservé en mémoire** sous forme de `string` Go, donc non effaçable.
 - **Messages d'erreur LND** : le backend reconnaît les échecs par leur texte (`invalid passphrase`, `already unlocked`, `wallet not found`), ce qui suppose LND v0.20. Une autre version peut changer ces textes.

@@ -10,18 +10,13 @@
 │  │              Namespace: lightning-playground            │ │
 │  │                                                          │ │
 │  │  ┌─────────────────────────────────────────────────┐   │ │
-│  │  │  Frontend Deployment (1 pod)                    │   │ │
-│  │  │  ├─ Pod: frontend-xxx                           │   │ │
-│  │  │  └─ Service: frontend (ClusterIP:8000)          │   │ │
-│  │  │     └─ Ingress: frontend-ingress (HTTP 80/443)  │   │ │
-│  │  └─────────────────────────────────────────────────┘   │ │
-│  │                                                          │ │
-│  │  ┌─────────────────────────────────────────────────┐   │ │
 │  │  │  Backend Deployment (1 pod - 2 containers)      │   │ │
-│  │  │  ├─ Container: backend (gRPC :8080)             │   │ │
+│  │  │  ├─ Container: backend (app :8080, ops :9090)   │   │ │
 │  │  │  ├─ Container: sidecar (cert/secret mgmt)       │   │ │
 │  │  │  ├─ Volume: lnd-shared-data (emptyDir)          │   │ │
-│  │  │  └─ Service: backend (ClusterIP)                │   │ │
+│  │  │  ├─ Service: backend (ClusterIP, ports backend  │   │ │
+│  │  │  │   and ops)                                   │   │ │
+│  │  │  └─ Ingress: app-ingress (HTTP 80 -> backend)   │   │ │
 │  │  └─────────────────────────────────────────────────┘   │ │
 │  │                                                          │ │
 │  │  ┌─────────────────────────────────────────────────┐   │ │
@@ -74,7 +69,7 @@
 
 | Aspect | Docker-Compose | Kubernetes |
 |--------|---|---|
-| **Frontend** | Single container | Deployment (1 pod) + Ingress |
+| **Interface** | Servie par le backend (port 8080, publié en 3000) | Servie par le backend, exposée par `app-ingress` (pas de service frontend) |
 | **Backend** | Single container | Deployment with sidecar (2 containers) |
 | **BTCD** | Service | StatefulSet + PVC (persistent blockchain) |
 | **LND** | 2 services | StatefulSet with 4 replicas (lnd-0, 1, 2, 3) |
@@ -89,7 +84,7 @@
 
 ### 1. **Deployment** (Stateless)
 ```yaml
-# Frontend & Backend - répliques identiques
+# Backend (UI + API) - répliques identiques
 kind: Deployment
 replicas: 1
 ```
@@ -113,16 +108,17 @@ replicas: 4  # lnd-0, lnd-1, lnd-2, lnd-3
 ### 3. **Service**
 ```yaml
 # Types utilisés:
-- ClusterIP (default) - frontend, backend
+- ClusterIP (default) - backend (ports `backend` 8080 et `ops` 9090)
 - Headless - btcd-headless, lnd-headless (DNS direct)
 ```
 
 ### 4. **Ingress**
 ```yaml
-# Expose frontend HTTP/HTTPS au monde extérieur
-frontend-ingress
+# Expose l'application (port app du backend) au monde extérieur
+app-ingress  (host lightning-playground.local, service backend, port backend)
   ├─ HTTP: /
-  └─ HTTPS: /
+  └─ annotations: proxy-buffering off, proxy-read-timeout 3600 (SSE)
+# Le port ops (/health, /ready, /metrics) n'est pas routé par l'ingress
 ```
 
 ### 5. **PersistentVolumeClaim (PVC)**
@@ -184,7 +180,7 @@ clusterIP: None  # Pas de load balancing, DNS direct
 **2. ClusterIP Service (Deployment)**
 ```yaml
 clusterIP: <auto>  # Load balancer sur pods
-# Utilisé pour: frontend, backend, lndtower
+# Utilisé pour: backend, lndtower
 # Raison: Pods peuvent être remplacés, service IP reste stable
 ```
 
@@ -198,7 +194,8 @@ containers:
   - name: backend
     image: LMare/lightning-playground-backend:v0.2.0-14
     ports:
-      - containerPort: 8080  # gRPC
+      - containerPort: 8080  # app (pages, fragments, JSON, SSE, assets)
+      - containerPort: 9090  # ops (/health, /ready, /metrics)
     volumeMounts:
       - name: lnd-shared-data
         mountPath: /app/node-storage
@@ -389,10 +386,9 @@ replicas: 3  # Plusieurs instances peuvent être déployées
    kubectl apply -f btcd-statefulset.yaml
    kubectl apply -f lnd-statefulset.yaml
    kubectl apply -f backend-deployment.yaml
-   kubectl apply -f frontend-deployment.yaml
 
 7. Créer Ingress
-   kubectl apply -f frontend-ingress.yaml
+   kubectl apply -f backend-ingress.yaml
 
 8. Vérifier
    kubectl get pods -n lightning-playground
@@ -405,11 +401,11 @@ replicas: 3  # Plusieurs instances peuvent être déployées
 
 ### Port Forwarding
 ```bash
-# Accéder au frontend (HTTP)
-kubectl port-forward service/frontend 8000:8000 -n lightning-playground
-
-# Accéder au backend (HTTP)
+# Accéder à l'application (UI + API, port app)
 kubectl port-forward service/backend 8080:8080 -n lightning-playground
+
+# Accéder aux sondes et métriques (port ops, interne)
+kubectl port-forward service/backend 9090:9090 -n lightning-playground
 ```
 
 ### Ingress (cluster.yaml)

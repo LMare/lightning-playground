@@ -1,7 +1,6 @@
 
 **Exécuter localement**
-`go run ./backend/cmd`
-`go run ./cmd/frontend`
+`go run ./backend/cmd` (l'interface est servie par le backend : http://localhost:8080, sondes/métriques sur :9090)
 
 
 
@@ -65,7 +64,10 @@ docker start lightning-playground-control-plane
 docker stop lightning-playground-control-plane
 ```
 => semble poser des soucis d'IP en redémarrant... à tester :
-`kubectl delete deployment frontend -n lightning-playground`
+`kubectl delete deployment backend -n lightning-playground`
+
+**Migration depuis l'ancien frontend (une seule fois)** : le service `frontend` a été supprimé, `kubectl apply -R` ne supprime pas les ressources retirées :
+`kubectl delete deploy/frontend svc/frontend ingress/frontend-ingress -n lightning-playground`
 
 **images dans kind**
 `docker exec -it lightning-playground-control-plane crictl images | grep LMare`
