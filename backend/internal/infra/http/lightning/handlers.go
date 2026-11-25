@@ -85,7 +85,7 @@ func (h *Handler) HandleListOfNodes(response http.ResponseWriter, request *http.
 	dtos := toNodeSummaryDTOs(nodes)
 	if common.IsHTMX(request) {
 		// "selected" is a UI-only input: the JSON output ignores it
-		common.HTMXResponse(response, templates, "nodes.html", nodesView{Selected: request.URL.Query().Get("selected"), Nodes: dtos})
+		common.HTMXResponse(response, templates, "nodes.gohtml", nodesView{Selected: request.URL.Query().Get("selected"), Nodes: dtos})
 	} else {
 		common.JSONResponse(response, dtos)
 	}
@@ -105,7 +105,7 @@ func (h *Handler) HandleShowUri(response http.ResponseWriter, request *http.Requ
 	}
 
 	if common.IsHTMX(request) {
-		common.HTMXResponse(response, templates, "uri.html", uri)
+		common.HTMXResponse(response, templates, "uri.gohtml", uri)
 	} else {
 		common.JSONResponse(response, uri)
 	}
@@ -151,7 +151,7 @@ func (h *Handler) HandleNodeInfo(response http.ResponseWriter, request *http.Req
 
 	dto := toNodeInfoDTO(info)
 	if common.IsHTMX(request) {
-		common.HTMXResponse(response, templates, "nodeInfo.html", nodeInfoView{NodeID: id.String(), Info: dto})
+		common.HTMXResponse(response, templates, "nodeInfo.gohtml", nodeInfoView{NodeID: id.String(), Info: dto})
 	} else {
 		common.JSONResponse(response, dto)
 	}
@@ -234,7 +234,7 @@ func (h *Handler) HandleCreateInvoice(response http.ResponseWriter, request *htt
 	}
 
 	if common.IsHTMX(request) {
-		common.HTMXResponse(response, templates, "paymentRequest.html", paymentRequest)
+		common.HTMXResponse(response, templates, "paymentRequest.gohtml", paymentRequest)
 	} else {
 		common.JSONResponse(response, paymentRequest)
 	}
@@ -321,7 +321,7 @@ func (h *Handler) HandleListChannels(response http.ResponseWriter, request *http
 
 	dtos := toChannelDTOs(channels)
 	if common.IsHTMX(request) {
-		common.HTMXResponse(response, templates, "channels.html", channelsView{NodeID: id.String(), Channels: dtos})
+		common.HTMXResponse(response, templates, "channels.gohtml", channelsView{NodeID: id.String(), Channels: dtos})
 	} else {
 		common.JSONResponse(response, dtos)
 	}
@@ -346,7 +346,7 @@ func (h *Handler) HandleGetBalance(response http.ResponseWriter, request *http.R
 
 	dto := toBalanceDTO(balance)
 	if common.IsHTMX(request) {
-		common.HTMXResponse(response, templates, "balance.html", dto)
+		common.HTMXResponse(response, templates, "balance.gohtml", dto)
 	} else {
 		common.JSONResponse(response, dto)
 	}
@@ -396,7 +396,7 @@ func (h *Handler) HandleCloseChannel(response http.ResponseWriter, request *http
 
 // HandleNodePage renders the node page (full page or HTMX body).
 func (h *Handler) HandleNodePage(response http.ResponseWriter, request *http.Request) {
-	web.RenderPage(response, request, web.Page{Title: "Node", ActivePage: "node"}, templates, "nodePage.html", nil)
+	web.RenderPage(response, request, web.Page{Title: "Node", ActivePage: "node"}, templates, "nodePage.gohtml", nil)
 }
 
 // HandleNodePanel renders the panel of a node (sections that lazy-load, forms bound to the node).
@@ -407,5 +407,5 @@ func (h *Handler) HandleNodePanel(response http.ResponseWriter, request *http.Re
 		return
 	}
 	response.Header().Set("HX-Trigger", "node-selected")
-	common.HTMXResponse(response, templates, "nodePanel.html", struct{ ID string }{ID: id.String()})
+	common.HTMXResponse(response, templates, "nodePanel.gohtml", struct{ ID string }{ID: id.String()})
 }

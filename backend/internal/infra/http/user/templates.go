@@ -5,7 +5,7 @@ import (
 	"html/template"
 )
 
-//go:embed templates/*.html
+//go:embed templates/*.gohtml
 var templatesFS embed.FS
 
-var templates = template.Must(template.ParseFS(templatesFS, "templates/*.html"))
+var templates = template.Must(template.ParseFS(templatesFS, "templates/*.gohtml"))

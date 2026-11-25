@@ -13,13 +13,13 @@ import (
 	"github.com/Lmare/lightning-playground/backend/internal/infra/http/common"
 )
 
-//go:embed templates/*.html
+//go:embed templates/*.gohtml
 var templatesFS embed.FS
 
 //go:embed static
 var staticFS embed.FS
 
-var templates = template.Must(template.ParseFS(templatesFS, "templates/*.html"))
+var templates = template.Must(template.ParseFS(templatesFS, "templates/*.gohtml"))
 
 // Page describes the shell around a page body.
 type Page struct {
@@ -28,7 +28,7 @@ type Page struct {
 }
 
 // RenderPage executes the template `name` of tmpl with data. HTMX navigation (not a history
-// restore) gets the body only; otherwise the body is wrapped in layout.html.
+// restore) gets the body only; otherwise the body is wrapped in layout.gohtml.
 func RenderPage(w http.ResponseWriter, r *http.Request, page Page, tmpl *template.Template, name string, data any) {
 	var body bytes.Buffer
 	if err := tmpl.ExecuteTemplate(&body, name, data); err != nil {
@@ -47,7 +47,7 @@ func RenderPage(w http.ResponseWriter, r *http.Request, page Page, tmpl *templat
 			http.Error(w, "Internal server error", http.StatusInternalServerError)
 			return
 		}
-	} else if err := templates.ExecuteTemplate(&out, "layout.html", map[string]any{
+	} else if err := templates.ExecuteTemplate(&out, "layout.gohtml", map[string]any{
 		"Title":      page.Title,
 		"ActivePage": page.ActivePage,
 		"Content":    template.HTML(body.String()),
@@ -68,7 +68,7 @@ func NewHandler() *Handler { return &Handler{} }
 
 // HandleHome renders the hello page.
 func (h *Handler) HandleHome(w http.ResponseWriter, r *http.Request) {
-	RenderPage(w, r, Page{Title: "Hello", ActivePage: "hello"}, templates, "hello.html", nil)
+	RenderPage(w, r, Page{Title: "Hello", ActivePage: "hello"}, templates, "hello.gohtml", nil)
 }
 
 // StaticHandler serves the embedded assets under /asset/ (no directory listing).

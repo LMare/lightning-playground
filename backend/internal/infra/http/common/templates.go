@@ -5,8 +5,8 @@ import (
 	"html/template"
 )
 
-//go:embed templates/*.html
+//go:embed templates/*.gohtml
 var messageFS embed.FS
 
 // messageTemplates holds the HTMX success/error toasts shared by every handler.
-var messageTemplates = template.Must(template.ParseFS(messageFS, "templates/*.html"))
+var messageTemplates = template.Must(template.ParseFS(messageFS, "templates/*.gohtml"))

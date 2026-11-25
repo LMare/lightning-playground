@@ -54,12 +54,12 @@ func HTMXResponse(response http.ResponseWriter, tmpl *template.Template, name st
 
 // return a response of success
 func HTMXMessageOk(response http.ResponseWriter, message string) {
-	HTMXResponse(response, messageTemplates, "success.html", message)
+	HTMXResponse(response, messageTemplates, "success.gohtml", message)
 }
 
 // Returns an HTML error response
 func HtmxMessageKo(response http.ResponseWriter, message string) {
-	HTMXResponse(response, messageTemplates, "error.html", message)
+	HTMXResponse(response, messageTemplates, "error.gohtml", message)
 }
 
 // return code 204

@@ -6,13 +6,13 @@ import (
 	"html/template"
 )
 
-//go:embed templates/*.html
+//go:embed templates/*.gohtml
 var templatesFS embed.FS
 
 // templates are parsed once at startup; truncate helpers are used by the uri and payment request views.
 var templates = template.Must(template.New("").
 	Funcs(template.FuncMap{"truncateUri": truncateUri, "truncate": truncate, "satAttr": satAttr, "formatBTC": formatBTC}).
-	ParseFS(templatesFS, "templates/*.html"))
+	ParseFS(templatesFS, "templates/*.gohtml"))
 
 // formatBTC returns sat as BTC with 2 decimals, rounded half up (away from zero for negatives),
 // using integer arithmetic only.
