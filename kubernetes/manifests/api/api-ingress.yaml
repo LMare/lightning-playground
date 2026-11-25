@@ -6,7 +6,7 @@ metadata:
   name: app-ingress
   namespace: lightning-playground
   labels:
-    app: backend
+    app: api
   annotations:
     # SSE (/api/v1/stream-event): no buffering, and keep an idle stream open (nginx closes it after 60 s by default)
     nginx.ingress.kubernetes.io/proxy-buffering: "off"
@@ -20,6 +20,6 @@ spec:
         pathType: Prefix
         backend:
           service:
-            name: backend
+            name: api
             port:
-              name: backend
+              name: api

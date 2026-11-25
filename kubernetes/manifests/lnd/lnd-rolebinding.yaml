@@ -19,7 +19,7 @@ metadata:
   namespace: lightning-playground
 subjects:
 - kind: ServiceAccount
-  name: backend-service-account
+  name: api-service-account
   namespace: lightning-playground
 roleRef:
   kind: Role

@@ -1,19 +1,19 @@
-# Loadbalancer intern to access to a pod Backend
+# Loadbalancer intern to access to a pod api
 apiVersion: v1
 kind: Service
 metadata:
-  name: backend
+  name: api
   namespace: lightning-playground
   labels:
-      app: backend
+      app: api
 spec:
   type: ClusterIP
   selector:
-    app: backend
+    app: api
   ports:
-  - name: backend
+  - name: api
     port: 8080
-    targetPort: backend-port
+    targetPort: api-port
   - name: ops
     port: 9090
     targetPort: ops-port
