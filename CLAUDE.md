@@ -50,7 +50,22 @@ Errors: `exception.NewError(msg, cause)` returns an `*AppError` carrying file:li
 
 Open items: `infra/sse` uses a single hard-coded session id (`"uniqueSession"`).
 
-Testing: unit tests per layer (domain, application with mocked ports, `infra/grpc/lnd` with `testsupport.GrpcClientFactoryMock`) plus `integration/` tests through the real router (`NewTestHarness` exposes `MockUserRepo`, `MockNodeRepo`, `GrpcFactory.Lightning/Router` testify mocks of the LND clients). Prefer integration tests that cross the most layers. `go test -race` currently reports a pre-existing data race in `infra/sse` (`TestSessionStart`).
+Testing: unit tests per layer (domain, application with mocked ports, `infra/grpc/lnd` with `testsupport.GrpcClientFactoryMock`) plus `integration/` tests through the real router (`NewTestHarness` exposes `MockUserRepo`, `MockNodeRepo`, `GrpcFactory.Lightning/Router` testify mocks of the LND clients). Prefer integration tests that cross the most layers (rules in `## Testing policy` below). `go test -race` currently reports a pre-existing data race in `infra/sse` (`TestSessionStart`).
+
+## Testing policy
+
+- Test behaviour at the highest layer that can observe it: integration through `NewTestHarness` (real router, mock repos and mock gRPC factory) by default. Unit tests only for domain rules, application branching (mocked ports), adapter mapping and error mapping, pure helpers with edge cases, and behaviour the router cannot reach (e.g. template error -> 500).
+- One behaviour, one test, one level. Do not re-assert an integration case in a unit test.
+- JSON contracts: assert status, content type, JSON fields, and `Vary: HX-Request`.
+- HTML contract: assert links resolve (link crawl), ids used by `hx-target`/`hx-include`/OOB/JS exist, SSE event names match the listened ones, rendered data values, state markers (selected, aria-current), and RGAA associations where a feature requires them.
+- Accessibility: RGAA associations (labels, `scope`, headers) are tested when a feature states them; check the attribute on the element, not its position.
+- Do not assert: attribute order, CSS classes other than state markers, wrapper/layout markup, exact copy (assert the ✅/❌ marker), element counts (unless the count is the behaviour), CDN versions, constants, config defaults, generated code.
+- No absence checks for removed code or old URLs once the migration that removed them is done.
+- JS/CSS/static: test serving only (content type, 404, no directory listing, path traversal). Keep JS minimal instead of testing its content.
+- Security: always test security-relevant behaviour (secrets never echoed, id and amount validation on each route).
+- Tests assert behaviour, not implementation. A test that forces a production choice for its own convenience is a test bug.
+- A test that violates this policy is changed or deleted only when the design or the human names it; the tester reports each one in its handoff.
+- The hexagonal archtest stays: `business` never imports `infra`, `bootstrap`, `testsupport`, the LND protobuf package or root config.
 
 ## Database (PostgreSQL)
 
