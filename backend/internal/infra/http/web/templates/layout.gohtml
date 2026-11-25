@@ -23,7 +23,7 @@
 		</div>
 
 		<!-- TODO : mettre dans le toaster ? -->
-		<div hx-ext="sse" sse-connect="/stream-event" >
+		<div hx-ext="sse" sse-connect="/api/v1/stream-event" >
 		  <div sse-swap="message"></div>
 		  <div sse-swap="error"></div>
 		</div>
@@ -50,7 +50,7 @@
 		<div class="grid-flow-col gap-4 md:place-self-center md:justify-self-end">
 			<a href="https://github.com/Lmare/lightning-playground" target="_blank" class="btn btn-ghost">	GitHub</a>
 		</div>
-		 <div id="version" hx-get="/version" hx-trigger="load"></div>
+		 <div id="version" hx-get="/api/v1/version" hx-trigger="load"></div>
 	</footer>
 
 	<dialog id="confirm-dialog" class="modal" aria-labelledby="confirm-dialog-title" aria-describedby="confirm-dialog-message">

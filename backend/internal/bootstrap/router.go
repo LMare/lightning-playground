@@ -83,25 +83,33 @@ func initAppRouter(handlers *handlers, m *metrics) http.Handler {
 	router.add("/node/panel", http.MethodGet, handlers.web.HandleNodePanel)
 	router.addPrefix("/asset/", http.MethodGet, web.StaticHandler().ServeHTTP)
 
-	router.add("/lightning/alias", http.MethodPut, handlers.lightning.HandleUpdateNodeAlias)
-	router.add("/lightning/channel", http.MethodPost, handlers.lightning.HandleOpenChannel)
-	router.add("/lightning/channel/close", http.MethodPost, handlers.lightning.HandleCloseChannel)
-	router.add("/lightning/balance", http.MethodGet, handlers.lightning.HandleGetBalance)
-	router.add("/lightning/channels", http.MethodGet, handlers.lightning.HandleListChannels)
-	router.add("/lightning/invoice", http.MethodPost, handlers.lightning.HandleCreateInvoice)
-	router.add("/lightning/nodes", http.MethodGet, handlers.lightning.HandleListOfNodes)
-	router.add("/lightning/nodeInfo", http.MethodGet, handlers.lightning.HandleNodeInfo)
-	router.add("/lightning/paiment", http.MethodPost, handlers.lightning.HandleMakePayment)
-	router.add("/lightning/peer", http.MethodPost, handlers.lightning.HandleAddPeer)
-	router.add("/lightning/wallet/unlock", http.MethodPost, handlers.lightning.HandleUnlockWallet)
-	router.add("/lightning/uri", http.MethodGet, handlers.lightning.HandleShowUri)
+	router.addAPI("/lightning/alias", http.MethodPut, handlers.lightning.HandleUpdateNodeAlias)
+	router.addAPI("/lightning/channel", http.MethodPost, handlers.lightning.HandleOpenChannel)
+	router.addAPI("/lightning/channel/close", http.MethodPost, handlers.lightning.HandleCloseChannel)
+	router.addAPI("/lightning/balance", http.MethodGet, handlers.lightning.HandleGetBalance)
+	router.addAPI("/lightning/channels", http.MethodGet, handlers.lightning.HandleListChannels)
+	router.addAPI("/lightning/invoice", http.MethodPost, handlers.lightning.HandleCreateInvoice)
+	router.addAPI("/lightning/nodes", http.MethodGet, handlers.lightning.HandleListOfNodes)
+	router.addAPI("/lightning/nodeInfo", http.MethodGet, handlers.lightning.HandleNodeInfo)
+	router.addAPI("/lightning/payment", http.MethodPost, handlers.lightning.HandleMakePayment)
+	router.addAPI("/lightning/peer", http.MethodPost, handlers.lightning.HandleAddPeer)
+	router.addAPI("/lightning/wallet/unlock", http.MethodPost, handlers.lightning.HandleUnlockWallet)
+	router.addAPI("/lightning/uri", http.MethodGet, handlers.lightning.HandleShowUri)
 
-	router.add("/users", http.MethodGet, handlers.user.HandleListUsers)
+	router.addAPI("/users", http.MethodGet, handlers.user.HandleListUsers)
 
-	router.add("/stream-event", http.MethodGet, handlers.streamEvent.HandleStreamEvent)
-	router.add("/version", http.MethodGet, handlers.version.HandleVersion)
+	router.addAPI("/stream-event", http.MethodGet, handlers.streamEvent.HandleStreamEvent)
+	router.addAPI("/version", http.MethodGet, handlers.version.HandleVersion)
 
 	return router
+}
+
+// apiPrefix is the versioned prefix of every non-page route (fragments, JSON, SSE).
+const apiPrefix = "/api/v1"
+
+// addAPI registers a route under apiPrefix; the metrics label is the prefixed path.
+func (router *router) addAPI(path string, verbe string, callback func(http.ResponseWriter, *http.Request)) {
+	router.add(apiPrefix+path, verbe, callback)
 }
 
 func (router *router) add(path string, verbe string, callback func(http.ResponseWriter, *http.Request)) {

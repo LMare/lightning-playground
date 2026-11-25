@@ -12,7 +12,7 @@
 		<button type="button" onclick="enableEdit()" class="text-sm" aria-label="Edit" title="edit">✏️</button>
 	</p>
 
-	<form id="edit-form" hx-put="/lightning/alias" hx-swap="none" style="display: none;align-items: center;">
+	<form id="edit-form" hx-put="/api/v1/lightning/alias" hx-swap="none" style="display: none;align-items: center;">
 		<input type="hidden" name="id" value="{{.NodeID}}">
 		<label for="alias-input" class="sr-only">Alias</label>
 		<input type="text" name="alias" value="{{.Info.Alias}}" id="alias-input" class="border w-[24ch] px-2 py-1 rounded" />

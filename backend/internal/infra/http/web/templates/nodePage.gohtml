@@ -16,7 +16,7 @@
 				<tbody
 					id="table-nodes-body"
 					class="cursor-pointer"
-					hx-get="/lightning/nodes"
+					hx-get="/api/v1/lightning/nodes"
 					hx-include="#selected-node"
 					hx-trigger="load, node-selected from:body, alias-updated from:body, wallet-unlocked from:body, every 3s [document.querySelector('#table-nodes-body tr[data-starting]')]"
 					hx-target="this"
@@ -38,7 +38,7 @@
 				<form
 					id="unlock-form"
 					method="dialog"
-					hx-post="/lightning/wallet/unlock"
+					hx-post="/api/v1/lightning/wallet/unlock"
 					hx-swap="none"
 					hx-on="htmx:afterRequest: this.querySelector('input[name=password]').value = ''">
 					<input type="hidden" name="id" id="unlock-id" />

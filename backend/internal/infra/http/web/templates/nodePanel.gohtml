@@ -3,7 +3,7 @@
 	<h2 class="text-xl text-center font-semibold mb-2">⚡️ Informations about your node ⚡️</h2>
 	<div
 		id="node-data"
-		hx-get="/lightning/nodeInfo?id={{.ID}}"
+		hx-get="/api/v1/lightning/nodeInfo?id={{.ID}}"
 		hx-trigger="load, alias-updated from:body"
 		hx-target="this"
 		hx-swap="innerHTML">
@@ -19,7 +19,7 @@
 		<h2 class="text-xl text-center font-semibold mb-2">⚡️ URI ⚡️</h2>
 		<p class="text-base text-gray-700 mb-4">You can share the url of your lightning node</p>
 		<div
-			hx-get="/lightning/uri?id={{.ID}}"
+			hx-get="/api/v1/lightning/uri?id={{.ID}}"
 			hx-trigger="load"
 			hx-target="this"
 			hx-swap="innerHTML">
@@ -30,7 +30,7 @@
 	<section class="mt-6 mx-6 w-100 bg-base-100 p-4 rounded-box shadow-md">
 		<h2 class="text-xl text-center font-semibold mb-2">⚡️ Balance ⚡️ <button id="balance-refresh" type="button" class="text-sm" title="Refresh">↻</button></h2>
 		<div
-			hx-get="/lightning/balance?id={{.ID}}"
+			hx-get="/api/v1/lightning/balance?id={{.ID}}"
 			hx-trigger="load, channel-closed from:body, click from:#balance-refresh"
 			hx-target="this"
 			hx-swap="innerHTML">
@@ -44,7 +44,7 @@
 			<thead><tr><th scope="col" id="channel-peer">Peer</th><th scope="col" id="channel-capacity">Capacity</th><th scope="col" id="channel-local">Local</th><th scope="col" id="channel-remote">Remote</th><th scope="col" id="channel-status">Status</th><th scope="col" id="channel-actions"><span class="sr-only">Actions</span></th></tr></thead>
 			<tbody
 				id="table-channels-body"
-				hx-get="/lightning/channels?id={{.ID}}"
+				hx-get="/api/v1/lightning/channels?id={{.ID}}"
 				hx-trigger="load, channel-closed from:body"
 				hx-target="this"
 				hx-swap="innerHTML">
@@ -56,7 +56,7 @@
 	<section class="mt-6 mx-6 w-100 bg-base-100 p-4 rounded-box shadow-md">
 		<h2 class="text-xl text-center font-semibold mb-2">⚡️ Pairs ⚡️</h2>
 		<p class="text-base text-gray-700 mb-4">Connect to a new peer</p>
-		<form hx-post="/lightning/peer" hx-swap="none" class="mt-2">
+		<form hx-post="/api/v1/lightning/peer" hx-swap="none" class="mt-2">
 			<input type="hidden" name="id" value="{{.ID}}">
 			<label for="uri" class="text-base text-gray-700 mb-4">Add a pair</label>
 			<input type="text" name="uri" id="uri" placeholder="uri : &lt;pubkey&gt;@&lt;ip&gt;:&lt;port&gt;" class="border px-2 py-1 rounded" />
@@ -71,7 +71,7 @@
 	<section class="mt-6 mx-6 w-100 bg-base-100 p-4 rounded-box shadow-md">
 		<h2 class="text-xl text-center font-semibold mb-2">⚡️ New Channel ⚡️</h2>
 		<p class="text-base text-gray-700 mb-4">🚧 Soon a more friendly way to create a channel 🏗️</p>
-		<form hx-post="/lightning/channel" hx-swap="none" class="mt-2" style="display:flex; flex-direction:column">
+		<form hx-post="/api/v1/lightning/channel" hx-swap="none" class="mt-2" style="display:flex; flex-direction:column">
 			<input type="hidden" name="id" value="{{.ID}}">
 			<!-- TODO : transform with a list of pairs -->
 			<label for="pubKey" class="text-base text-gray-700">Public Key</label>
@@ -90,7 +90,7 @@
 		<div id="invoice-form">
 			<p class="text-base text-gray-700 mb-4">Create a quick invoice 🪙</p>
 			<form
-					hx-post="/lightning/invoice"
+					hx-post="/api/v1/lightning/invoice"
 					hx-swap="innerHTML"
 					hx-target="#invoice-result"
 					hx-on="htmx:afterRequest:showInvoice()"
@@ -121,7 +121,7 @@
 		<div id="pay-form">
 			<p class="text-base text-gray-700 mb-4">Pay a invoice 🪙</p>
 			<form
-					hx-post="/lightning/paiment"
+					hx-post="/api/v1/lightning/payment"
 					hx-swap="none"
 					class="mt-2"
 					style="display:flex; flex-direction:column">
