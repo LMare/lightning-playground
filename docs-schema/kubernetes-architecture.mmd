@@ -3,7 +3,7 @@ graph TD
         subgraph "Security & Storage (Top Layer)"
             direction LR
             SEC["🔐 Secrets<br/>btcd-secret<br/>lnd-secret<br/>mTLS certs"]
-            SA["👤 ServiceAccounts<br/>backend-sa<br/>lnd-sa<br/>btcd-sa"]
+            SA["👤 ServiceAccounts<br/>api-sa<br/>lnd-sa<br/>btcd-sa"]
             PVBTCD["💾 PV: btcd-data<br/>~20Gi<br/>blockchain"]
             PVLND["💾 PV: lnd-*-data<br/>~5Gi each<br/>wallets"]
         end
@@ -12,10 +12,10 @@ graph TD
             FEI["🌐 app-ingress<br/>HTTP/HTTPS<br/>Port 80/443<br/>(app port only)"]
         end
 
-        subgraph "Backend Layer (UI + API)"
-            BE1["⚙️ Backend-0<br/>+ sidecar<br/>app 8080 / ops 9090"]
-            BE2["⚙️ Backend-1<br/>+ sidecar<br/>app 8080 / ops 9090"]
-            BES["🔧 Backend Service<br/>ClusterIP<br/>LB: BE-0/1"]
+        subgraph "API Layer (UI + API)"
+            BE1["⚙️ API-0<br/>+ sidecar<br/>app 8080 / ops 9090"]
+            BE2["⚙️ API-1<br/>+ sidecar<br/>app 8080 / ops 9090"]
+            BES["🔧 API Service<br/>ClusterIP<br/>LB: BE-0/1"]
         end
         
         subgraph "Lightning Network<br/>StatefulSet (4 replicas)"
@@ -82,14 +82,14 @@ graph TD
     PVLND -.->|mount| LND3
     
     classDef frontend fill:#FFD700,stroke:#333,stroke-width:2px,color:#000
-    classDef backend fill:#87CEEB,stroke:#333,stroke-width:2px,color:#000
+    classDef api fill:#87CEEB,stroke:#333,stroke-width:2px,color:#000
     classDef lightning fill:#FF6B6B,stroke:#333,stroke-width:2px,color:#fff
     classDef bitcoin fill:#FFA500,stroke:#333,stroke-width:2px,color:#000
     classDef storage fill:#90EE90,stroke:#333,stroke-width:2px,color:#000
     classDef security fill:#DDA0DD,stroke:#333,stroke-width:2px,color:#000
     
     class FEI frontend
-    class BE1,BE2,BES backend
+    class BE1,BE2,BES api
     class LND0,LND1,LND2,LND3,LNDS lightning
     class BTCD0,BTCDS bitcoin
     class PVBTCD,PVLND storage

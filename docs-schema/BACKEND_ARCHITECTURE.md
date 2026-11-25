@@ -1,6 +1,6 @@
-# Architecture du backend (hexagonale)
+# Architecture de l'API (hexagonale)
 
-Le backend Go (`backend/internal/`) suit une architecture hexagonale (ports & adapters) :
+L'API Go (`api/internal/`) suit une architecture hexagonale (ports & adapters) :
 le métier ne connaît ni HTTP, ni gRPC, ni PostgreSQL ; ce sont les adaptateurs de `infra/` qui s'adaptent au métier.
 
 ```mermaid
@@ -47,15 +47,15 @@ graph LR
 ```
 
 ## Règle de dépendance
-`business/` n'importe **jamais** `infra/`, `bootstrap/`, `testsupport/`, les types protobuf LND (`backend/gRPC`) ni la config racine,
+`business/` n'importe **jamais** `infra/`, `bootstrap/`, `testsupport/`, les types protobuf LND (`api/gRPC`) ni la config racine,
 et les deux contextes (`lightning`, `user`) ne s'importent pas entre eux.
-Cette règle est vérifiée automatiquement par `backend/internal/archtest/architecture_test.go`.
+Cette règle est vérifiée automatiquement par `api/internal/archtest/architecture_test.go`.
 
 Côté HTTP, les pages de navigation (accessibles depuis le menu) sont toutes dans `infra/http/web`. Les paquets `infra/http/lightning` et `infra/http/user` ne contiennent que des ressources (fragments HTMX et JSON) et n'importent pas `web` (ce n'est plus vérifié par un test automatique).
 
 ## Arborescence
 ```
-backend/
+api/
   cmd/                      point d'entrée (main.go + migrations au démarrage)
   gRPC/                     .proto LND + stubs générés (ne pas éditer à la main)
   internal/
@@ -94,7 +94,7 @@ Exemple minimal : `UserService.List` → port `UserRepository` → `infra/postgr
 Le JSON est produit par un DTO de `infra/http/user` (le domaine n'a pas de tags JSON).
 
 ## Routes HTTP
-Le backend est le seul serveur web de l'application : il sert les pages, les assets statiques, les fragments HTMX et le JSON. Il n'y a plus de service frontend.
+L'API est le seul serveur web de l'application : il sert les pages, les assets statiques, les fragments HTMX et le JSON. Il n'y a plus de service frontend.
 Les handlers répondent en HTML (fragments HTMX) si l'en-tête `HX-Request: true` est présent, sinon en JSON (réponses avec `Vary: HX-Request`). Les pages (`/`, `/hello`, `/person`, `/node`) et `/node/panel` sont HTML uniquement.
 
 Règle de préfixe : une route est une « API » si elle expose des données ou une action, quel que soit le format de la réponse (JSON ou fragment HTMX). Toutes les routes API sont enregistrées sous `/api/v1` (`router.addAPI` dans `bootstrap/router.go`, `apiPrefix = "/api/v1"`), et leur label de métrique porte le même préfixe. Les pages, `/node/panel`, `/asset/` et les routes ops gardent leur chemin.
@@ -102,8 +102,8 @@ Règle de préfixe : une route est une « API » si elle expose des données ou 
 ### Ports
 | Port | Variable | Contenu | Exposition |
 |------|----------|---------|------------|
-| app `8080` | `BACKEND_PORT` | pages, `/asset/`, `/node/panel`, API sous `/api/v1` (`/api/v1/lightning/*`, `/api/v1/users`, `/api/v1/stream-event`, `/api/v1/version`) | compose : `3000:8080` ; ingress `app-ingress` (service `backend`, port `backend`) |
-| ops `9090` | `BACKEND_OPS_PORT` | `/health`, `/ready`, `/metrics` | interne au cluster uniquement (probes, ServiceMonitor, port `ops`) ; non publié par compose ni par l'ingress |
+| app `8080` | `API_PORT` | pages, `/asset/`, `/node/panel`, API sous `/api/v1` (`/api/v1/lightning/*`, `/api/v1/users`, `/api/v1/stream-event`, `/api/v1/version`) | compose : `3000:8080` ; ingress `app-ingress` (service `api`, port `api`) |
+| ops `9090` | `API_OPS_PORT` | `/health`, `/ready`, `/metrics` | interne au cluster uniquement (probes, ServiceMonitor, port `ops`) ; non publié par compose ni par l'ingress |
 
 Les deux listeners sont ouverts (`net.Listen`) avant le `Serve` de l'un ou l'autre, pour que `/ready` ne réponde pas avant que l'app écoute. Les deux routeurs partagent un registre Prometheus ; seul le routeur app compte les requêtes (`http_requests_total`), donc les sondes et les scrapes ne sont pas comptés. Sur le port app, `/health`, `/ready` et `/metrics` renvoient 404.
 
@@ -226,7 +226,7 @@ POST /api/v1/lightning/payment
 Le flux de paiement survit à la requête HTTP (contexte détaché avec `context.WithoutCancel`) ; la connexion gRPC est fermée à la fin du flux.
 
 ## Base de données
-PostgreSQL, table `users` uniquement (données de démonstration). Migrations golang-migrate dans `migrations/`, exécutées au démarrage du backend.
+PostgreSQL, table `users` uniquement (données de démonstration). Migrations golang-migrate dans `migrations/`, exécutées au démarrage de l'API.
 Connexion via `POSTGRES_DSN`. Déployée par Helm (Bitnami) sur Kubernetes (`make deploy-postgres`) et par un service `postgres` dans `docker-compose.yml`.
 
 ## Tests
@@ -242,6 +242,6 @@ dans les logs (`common.LogException`) et reste compatible avec `errors.Is` / `er
 
 Le playground tourne sur simnet et n'a pas d'authentification. Risques connus et acceptés pour la route `POST /api/v1/lightning/wallet/unlock` :
 - **Pas d'authentification, de protection CSRF ni de limitation de débit.** C'est le cas de toutes les routes qui modifient l'état (`/api/v1/lightning/payment`, `/api/v1/lightning/channel`, ...). Une page web ouverte dans le même navigateur peut donc envoyer des tentatives de mot de passe. Les wallets sont des wallets simnet sans valeur, et le déverrouillage ne déplace aucun fonds.
-- **Mot de passe transmis en HTTP clair** entre le navigateur et le backend. `docker-compose.yml` publie `3000:8080` (port app) sur toutes les interfaces, et l'ingress Kubernetes n'a pas de section `tls:`. Ne pas exposer l'application en dehors de la machine locale.
+- **Mot de passe transmis en HTTP clair** entre le navigateur et l'API. `docker-compose.yml` publie `3000:8080` (port app) sur toutes les interfaces, et l'ingress Kubernetes n'a pas de section `tls:`. Ne pas exposer l'application en dehors de la machine locale.
 - **Mot de passe conservé en mémoire** sous forme de `string` Go, donc non effaçable.
-- **Messages d'erreur LND** : le backend reconnaît les échecs par leur texte (`invalid passphrase`, `already unlocked`, `wallet not found`), ce qui suppose LND v0.20. Une autre version peut changer ces textes.
+- **Messages d'erreur LND** : l'API reconnaît les échecs par leur texte (`invalid passphrase`, `already unlocked`, `wallet not found`), ce qui suppose LND v0.20. Une autre version peut changer ces textes.

@@ -13,13 +13,13 @@ Branch `refacto/hexagonal` migrates the backend from layered ("clean") architect
 ```bash
 go build ./... && go vet ./...          # CI compile + vet
 go test ./...                           # all tests (unit + integration)
-go test ./backend/internal/integration -run TestName -v   # single test
+go test ./api/internal/integration -run TestName -v   # single test
 go test -coverpkg=./... -coverprofile=cover.out ./... -count=1   # CI coverage run (Codecov; ignores *.pb.go and testsupport)
 
-go run ./backend/cmd      # run backend locally (needs Postgres, see below; migrations are read from ./migrations); UI on :8080, ops on :9090
+go run ./api/cmd          # run api locally (needs Postgres, see below; migrations are read from ./migrations); UI and API on :8080, ops on :9090
 
 docker buildx bake                 # build all images (docker-bake.hcl)
-docker compose up -d               # app (UI + API) on :3000 -> backend :8080
+docker compose up -d               # app (UI + API) on :3000 -> api :8080
 make all                           # Kubernetes: bake, kind cluster, load images, postgres (helm), deploy, hosts, monitoring
 make refresh-new-version           # bump version.txt (sed across yaml/env/bake files), rebuild app images, reload, redeploy
 make check-deps                    # verify docker/kind/kubectl/buildx/helm
@@ -29,11 +29,11 @@ LND wallets must be created manually on first launch (`lncli --network=simnet cr
 
 ## Architecture
 
-Entrypoints: `backend/cmd` (backend binary: `main.go` + `migration.go`; it is the only web server: it serves the pages, the static assets, the HTMX fragments and the JSON), and `cmd/{sidecar-backend,sidecar-btcd,sidecar-lnd}` (each its own image; sidecars live in `sidecar/` and handle file/Kubernetes concerns such as macaroon/cert sharing). There is no frontend service any more. `config.go` at the repo root is the shared env-driven `Config` (`.env`).
+Entrypoints: `api/cmd` (api binary: `main.go` + `migration.go`; it is the only web server: it serves the pages, the static assets, the HTMX fragments and the JSON), and `cmd/{sidecar-api,sidecar-btcd,sidecar-lnd}` (each its own image; sidecars live in `sidecar/` and handle file/Kubernetes concerns such as macaroon/cert sharing). There is no frontend service any more. `config.go` at the repo root is the shared env-driven `Config` (`.env`).
 
-Two listeners in the backend binary: the **app** port `BACKEND_PORT` (8080; pages, `/asset/`, `/node/panel`, and the API under `/api/v1/` (`/api/v1/lightning/*`, `/api/v1/users`, `/api/v1/stream-event`, `/api/v1/version`); the only one behind the ingress and published by compose) and the **ops** port `BACKEND_OPS_PORT` (9090; `/health`, `/ready`, `/metrics`; cluster-internal, not published, not exposed by the ingress). Both routers share one Prometheus registry; only the app router is instrumented.
+Two listeners in the api binary: the **app** port `API_PORT` (8080; pages, `/asset/`, `/node/panel`, and the API under `/api/v1/` (`/api/v1/lightning/*`, `/api/v1/users`, `/api/v1/stream-event`, `/api/v1/version`); the only one behind the ingress and published by compose) and the **ops** port `API_OPS_PORT` (9090; `/health`, `/ready`, `/metrics`; cluster-internal, not published, not exposed by the ingress). Both routers share one Prometheus registry; only the app router is instrumented.
 
-Backend (`backend/internal/`) is hexagonal, split in `business/` and `infra/` (rule: `business` never imports `infra`, `bootstrap`, `testsupport`, the LND protobuf package or root config; enforced by `archtest/architecture_test.go`):
+The API (`api/internal/`) is hexagonal, split in `business/` and `infra/` (rule: `business` never imports `infra`, `bootstrap`, `testsupport`, the LND protobuf package or root config; enforced by `api/internal/archtest/architecture_test.go`):
 - `business/<context>/` with `domain/`, `port/` (outbound interfaces), `application/` (use cases, depend only on ports). Two contexts, independent from each other:
   - `lightning` — domain: `NodeID` (validated), `NodeSummary` (with `WalletState`), `NodeInfo`, `PeerAddress`, `Channel` (with `ChannelPoint` `txid:index` and `ChannelStatus`: `active`/`inactive`/`pending_open`/`closing`/`force_closing`; `IsClosable`), `PaymentUpdate`, `WalletState` (`IsReady`: `rpc_active`/`server_active`), business errors (no json tags). Ports: `NodeRepository`, `NodeInspector` (`GetSummary`, `GetWalletState`, `GetInfo`, `UpdateAppearance`), `WalletGateway` (`Unlock`), `ChannelGateway` (`AddPeer`, `OpenChannel`, `ListChannels`, `CloseChannel(..., force bool)` returning the closing txid), `PaymentGateway`, `PaymentProgress`, `PaymentNotifier`. Services: `NodeService` (`ListNodes` keeps every node with its wallet state; `UnlockWallet`), `ChannelService` (`AddPeer`, `OpenChannel`, `ListChannels`, `CloseChannel`, which pre-checks the channel state before calling the gateway), plus invoices and payments.
   - `user` — demo user listing (`UserRepository.FindAll`).
@@ -44,7 +44,7 @@ Backend (`backend/internal/`) is hexagonal, split in `business/` and `infra/` (r
   - `http/{common,lightning,user,web}` — handlers, DTOs (`dto.go`, own the json tags) and HTMX templates. Each package embeds its own `templates/*.gohtml` with `go:embed` and parses them once; `common` holds the shared helpers (`Fail`, `HTMXResponse`, `JSONResponse`, success/error toasts), probe/version/stream handlers. Same handlers serve HTML when `HX-Request` is set and JSON otherwise (`Vary: HX-Request`). `web` owns every navigable page: `/`, `/hello`, `/person`, `/node`, `/node/panel` (`pages.go`, no service call), `render.go` (`Page`, typed `ActivePage` constants, `RenderPage`; the menu is sent out-of-band on fragment responses), `static.go` (`StaticHandler`, assets under `/asset/`) and the templates `layout`, `menu`, `hello`, `nodePage`, `nodePanel`, `personPage`. `lightning` and `user` are resources only (fragments/JSON, DTOs) and must not import `web`.
 - Route prefix rule: a route is "API" if it exposes data or an action, whatever it returns (JSON or HTMX fragment). API routes are registered with `router.addAPI` (`bootstrap/router.go`, `apiPrefix = "/api/v1"`), so their path and metrics label carry `/api/v1`. Pages (`/`, `/hello`, `/person`, `/node`), `/node/panel`, `/asset/` and the ops routes keep their paths.
 - `bootstrap/` — manual composition root (`InitApp`: DB → repos → factories → services → handlers → router). Takes repos/factories as inputs so tests inject mocks.
-- `shared/exception` — app error types. `backend/gRPC/` — vendored LND `.proto` + generated stubs (regenerate with `protoc --go_out=. --go-grpc_out=.`; don't hand-edit `.pb.go`).
+- `shared/exception` — app error types. `api/gRPC/` — vendored LND `.proto` + generated stubs (regenerate with `protoc --go_out=. --go-grpc_out=.`; don't hand-edit `.pb.go`).
 - `testsupport/` + `integration/` — `NewTestHarness` assembles the real router and services with mock repos and a mock gRPC factory.
 
 Errors: `exception.NewError(msg, cause)` returns an `*AppError` carrying file:line and the cause chain (works with `errors.Is/As`; `common.LogException` prints the chain). Business validation errors are plain sentinels in `domain` (`errors.Is`).
@@ -70,10 +70,10 @@ Testing: unit tests per layer (domain, application with mocked ports, `infra/grp
 
 ## Database (PostgreSQL)
 
-Only the `users` table exists (demo data): `migrations/0001_create_user_table.{up,down}.sql` (pgcrypto, `id UUID` default `gen_random_uuid()`, `nom`, `prenom`, `age`, `email`, 3 seed rows). Migrations use golang-migrate and run **at backend startup** (`backend/cmd/migration.go`, source `file://migrations`, so the working dir must contain `migrations/`; the backend Dockerfile copies it). Connection string: `POSTGRES_DSN` (default `postgres://user:password@localhost:5432/mydb?sslmode=disable`; `.env` points to the in-cluster Bitnami service `postgres-postgresql.lightning-playground.svc.cluster.local`, db `appdb`, user `appuser`). Postgres is deployed only on Kubernetes via `make deploy-postgres` (Helm); `docker-compose.yml` has its own `postgres` service (image `POSTGRES_TAG` from `.env`, same `appuser`/`apppassword`/`appdb` credentials, `POSTGRES_DSN` overridden on the backend service).
+Only the `users` table exists (demo data): `migrations/0001_create_user_table.{up,down}.sql` (pgcrypto, `id UUID` default `gen_random_uuid()`, `nom`, `prenom`, `age`, `email`, 3 seed rows). Migrations use golang-migrate and run **at api startup** (`api/cmd/migration.go`, source `file://migrations`, so the working dir must contain `migrations/`; the api Dockerfile copies it). Connection string: `POSTGRES_DSN` (default `postgres://user:password@localhost:5432/mydb?sslmode=disable`; `.env` points to the in-cluster Bitnami service `postgres-postgresql.lightning-playground.svc.cluster.local`, db `appdb`, user `appuser`). Postgres is deployed only on Kubernetes via `make deploy-postgres` (Helm); `docker-compose.yml` has its own `postgres` service (image `POSTGRES_TAG` from `.env`, same `appuser`/`apppassword`/`appdb` credentials, `POSTGRES_DSN` overridden on the api service).
 
 ## Docs
 
-`docs-schema/` holds the human-written architecture docs: `BACKEND_ARCHITECTURE.md` (hexagonal layout, routes, flows; up to date, keep it in sync with the code), ARCHITECTURE.md and DETAILED_FLOWS.md (system overview; backend parts updated), KUBERNETES_ARCHITECTURE.md (not reviewed against the manifests), plus Mermaid sources. `HowTo.md` has misc setup notes (gRPC client generation, btcd image, lncli).
+`docs-schema/` holds the human-written architecture docs: `BACKEND_ARCHITECTURE.md` (API hexagonal layout, routes, flows; up to date, keep it in sync with the code; the file name predates the rename to `api/`), ARCHITECTURE.md and DETAILED_FLOWS.md (system overview; api parts updated), KUBERNETES_ARCHITECTURE.md (not reviewed against the manifests), plus Mermaid sources. `HowTo.md` has misc setup notes (gRPC client generation, btcd image, lncli).
 
 Other infra: `docker-compose.yml`, `docker-bake.hcl`, `kubernetes/` (manifests + Helm monitoring chart, Prometheus/Grafana). `docker/` is gitignored (ELT work lives on `feature/elt-pipeline`). Version is single-sourced in `version.txt`.

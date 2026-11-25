@@ -6,14 +6,14 @@
 Timeline: Création de canal LND-0 → LND-1 (1 BTC)
 
 ┌─────────────────────────────────────────────────────────────┐
-│                   BROWSER (UI servie par le backend)        │
+│                   BROWSER (UI servie par l'API)             │
 │          User clicks: "Open Channel"                         │
 │          Amount: 1 BTC                                       │
 └─────────────────┬───────────────────────────────────────────┘
                   │
                   ▼
 ┌─────────────────────────────────────────────────────────────┐
-│                   BACKEND                                   │
+│                   API                                       │
 │      Call: LND-0.OpenChannel(                               │
 │        nodeID: lnd1-pubkey,                                 │
 │        amount: 1 BTC,                                       │
@@ -75,7 +75,7 @@ Scénario: LND-0 envoie 0.1 BTC à LND-1
 
 Step 1: Create Payment Request (LND-1)
 ┌────────────────────────────────────────┐
-│ Backend calls LND-1.AddInvoice:        │
+│ API calls LND-1.AddInvoice:            │
 │  - Amount: 0.1 BTC                     │
 │  - Memo: "Payment for service"         │
 │  - Expiry: 1 hour                      │
@@ -87,7 +87,7 @@ Step 1: Create Payment Request (LND-1)
                   ▼
 Step 2: Send Payment (LND-0)
 ┌────────────────────────────────────────┐
-│ Backend calls LND-0.SendPayment:       │
+│ API calls LND-0.SendPayment:           │
 │  - PaymentRequest: lnbc100m1...        │
 │  - Amount: 0.1 BTC (converted to msat) │
 │                                        │
@@ -200,14 +200,14 @@ Penalty tx confirms first
 ```
 ┌──────────────────────────────────────────────────────────┐
 │                    USER LAYER                            │
-│        (Browser, pages et fragments HTMX du backend)     │
+│        (Browser, pages et fragments HTMX de l'API)       │
 └─────────────────────────┬────────────────────────────────┘
                           │ HTTP
                           │ (JSON ou fragments HTMX)
                           ▼
 ┌──────────────────────────────────────────────────────────┐
 │                   APPLICATION LAYER                      │
-│                    (Go Backend)                          │
+│                    (Go API)                              │
 │                                                           │
 │  ┌──────────────────────────────────────────────────┐  │
 │  │ Adaptateurs HTTP (infra/http) :                  │  │
@@ -236,7 +236,7 @@ Penalty tx confirms first
     └──────────────┘
             │
             │ Both LND nodes register with Watchtower
-            │ (P2P connection, not Backend)
+            │ (P2P connection, not API)
             │
             ▼
         ┌─────┐

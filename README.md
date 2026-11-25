@@ -27,9 +27,9 @@ TODO :
   - archi hexagonal to complete TI for test cover
   - monitoring (alerts)
   - monitoring (logs)
-  - SSE with Deployement Backend broken -> need to put a broker (ex: Redis)
-  - Wallet creation (`InitWallet`, still done with lncli) to be handled by the backend via gRPC `WalletUnlocker` service.
-  - Define NetworkPolicies to restrict communication paths (ingress ↔ backend ↔ LND ↔ btcd) ?
+  - SSE with Deployement API broken -> need to put a broker (ex: Redis)
+  - Wallet creation (`InitWallet`, still done with lncli) to be handled by the api via gRPC `WalletUnlocker` service.
+  - Define NetworkPolicies to restrict communication paths (ingress ↔ api ↔ LND ↔ btcd) ?
   - infra as code (Terraform + kubernetes with Kind) ?
   - LLM
 
@@ -61,17 +61,31 @@ Go to : http://localhost:3000/ (docker compose)
 
 Go to : http://lightning-playground.local/ (Kubernetes)
 
-The backend serves the web interface itself (no separate frontend service). Its app port (8080) is published as `3000` by docker compose and routed by the `app-ingress`; the ops port (9090: `/health`, `/ready`, `/metrics`) is cluster-internal and not published.
+The api serves the web interface itself (no separate frontend service). Its app port (8080) is published as `3000` by docker compose and routed by the `app-ingress`; the ops port (9090: `/health`, `/ready`, `/metrics`) is cluster-internal and not published.
 
 **Upgrading an existing Kubernetes cluster (one time):** the `frontend` deployment, service and ingress were removed. `kubectl apply -R` does not delete removed resources, so run once:
 ```bash
 kubectl delete deploy/frontend svc/frontend ingress/frontend-ingress -n lightning-playground
 ```
 
+**Upgrading an existing Kubernetes cluster (one time, `backend` renamed to `api`):** the deployment, service, service account, ServiceMonitor and Grafana dashboard ConfigMap were renamed. `kubectl apply -R` does not delete them, so the old `backend` pod would keep running next to `api` and Prometheus would scrape both. Run once:
+```bash
+kubectl delete deploy/backend svc/backend sa/backend-service-account -n lightning-playground
+kubectl delete servicemonitor/backend-monitor -n monitoring
+kubectl delete configmap/lightning-playground-backend-dashboard -n monitoring
+```
+Then rebuild and load the images under their new names (`lightning-playground-api` and `lightning-playground-sidecar-api`) and redeploy:
+```bash
+docker buildx bake api sidecars
+make load-images
+make deploy
+```
+If your local `.env` still sets `BACKEND_PORT`, `BACKEND_OPS_PORT` or `BACKEND_URL`, rename them to `API_PORT` and `API_OPS_PORT` (`BACKEND_URL` no longer exists). The old keys are silently ignored and the defaults (8080, 9090) are used.
+
 Grafana (Kubernetes) : 
 | Clé      | Valeur |
 |----------|--------|
-| URL      | https://grafana.lightning-playground.local/d/admzlxj/lightning-playground-backend-dashboard?orgId=1&from=now-30m&to=now&timezone=browser&refresh=5s |
+| URL      | https://grafana.lightning-playground.local/d/admzlxj/lightning-playground-api-dashboard?orgId=1&from=now-30m&to=now&timezone=browser&refresh=5s |
 | Login    | `admin` |
 | Password | `kubectl get secret -n monitoring monitoring-grafana -o jsonpath="{.data.admin-password}" \| base64 --decode` |
 
