@@ -74,6 +74,6 @@ Only the `users` table exists (demo data): `migrations/0001_create_user_table.{u
 
 ## Docs
 
-`docs-schema/` holds the human-written architecture docs: `BACKEND_ARCHITECTURE.md` (API hexagonal layout, routes, flows; up to date, keep it in sync with the code; the file name predates the rename to `api/`), ARCHITECTURE.md and DETAILED_FLOWS.md (system overview; api parts updated), KUBERNETES_ARCHITECTURE.md (not reviewed against the manifests), plus Mermaid sources. `HowTo.md` has misc setup notes (gRPC client generation, btcd image, lncli).
+`docs-schema/` holds the human-written architecture docs: `API_ARCHITECTURE.md` (API hexagonal layout, routes, flows; up to date, keep it in sync with the code), ARCHITECTURE.md and DETAILED_FLOWS.md (system overview; api parts updated), KUBERNETES_ARCHITECTURE.md (not reviewed against the manifests), plus Mermaid sources. `HowTo.md` has misc setup notes (gRPC client generation, btcd image, lncli).
 
 Other infra: `docker-compose.yml`, `docker-bake.hcl`, `kubernetes/` (manifests + Helm monitoring chart, Prometheus/Grafana). `docker/` is gitignored (ELT work lives on `feature/elt-pipeline`). Version is single-sourced in `version.txt`.

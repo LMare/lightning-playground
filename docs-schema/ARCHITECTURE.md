@@ -47,7 +47,7 @@
 - Port app: `API_PORT` (8080), publié en `3000` par docker compose et routé par l'ingress Kubernetes (`app-ingress`)
 
 ### 2. **API**
-- Serveur d'application Go, architecture hexagonale (voir [BACKEND_ARCHITECTURE.md](BACKEND_ARCHITECTURE.md))
+- Serveur d'application Go, architecture hexagonale (voir [API_ARCHITECTURE.md](API_ARCHITECTURE.md))
 - Expose une API HTTP (JSON, ou fragments HTML si la requête vient de HTMX) et un flux SSE (`/api/v1/stream-event`)
 - Port ops: `API_OPS_PORT` (9090), `/health`, `/ready`, `/metrics`, interne au cluster uniquement
 - Parle gRPC (avec macaroon + TLS) aux nœuds LND ; il n'expose pas de gRPC
