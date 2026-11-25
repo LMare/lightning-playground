@@ -21,7 +21,7 @@ import (
 )
 
 const (
-	unlockPath = "/lightning/wallet/unlock"
+	unlockPath = "/api/v1/lightning/wallet/unlock"
 	pwd        = "Sup3r-S3cret-Pwd"
 )
 
@@ -225,7 +225,7 @@ func TestHTMX_ListNodes_UnlockButton(t *testing.T) {
 		h.MockNodeRepo.On("GetNodesIds").Return([]string{"lnd-0"}, nil)
 		stateIs(h, s)
 		h.GrpcFactory.Lightning.On("GetInfo", mock.Anything, mock.Anything).Return(&lnrpc.GetInfoResponse{Alias: "alice"}, nil)
-		rr := doHTMX(h, http.MethodGet, "/lightning/nodes", nil)
+		rr := doHTMX(h, http.MethodGet, "/api/v1/lightning/nodes", nil)
 		assert.Equal(t, http.StatusOK, rr.Code)
 		return rr.Body.String()
 	}

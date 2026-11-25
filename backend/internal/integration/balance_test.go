@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-const balancePath = "/lightning/balance"
+const balancePath = "/api/v1/lightning/balance"
 
 func mockBalances(h *testsupport.TestHarness, locked int64) {
 	h.GrpcFactory.Lightning.On("WalletBalance", mock.Anything, mock.Anything).Return(&lnrpc.WalletBalanceResponse{

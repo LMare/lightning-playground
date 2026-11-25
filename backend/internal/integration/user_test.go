@@ -21,7 +21,7 @@ func TestListUsers_JSON(t *testing.T) {
 	h.MockUserRepo.On("FindAll", mock.Anything).Return(users, nil)
 
 	rr := httptest.NewRecorder()
-	h.Router.ServeHTTP(rr, httptest.NewRequest(http.MethodGet, "/users", nil))
+	h.Router.ServeHTTP(rr, httptest.NewRequest(http.MethodGet, "/api/v1/users", nil))
 
 	assert.Equal(t, http.StatusOK, rr.Code)
 	assert.JSONEq(t, `[
@@ -35,7 +35,7 @@ func TestListUsers_RepositoryError(t *testing.T) {
 	h.MockUserRepo.On("FindAll", mock.Anything).Return([]domain.UserModel(nil), errors.New("db down"))
 
 	rr := httptest.NewRecorder()
-	h.Router.ServeHTTP(rr, httptest.NewRequest(http.MethodGet, "/users", nil))
+	h.Router.ServeHTTP(rr, httptest.NewRequest(http.MethodGet, "/api/v1/users", nil))
 
 	assert.Equal(t, http.StatusInternalServerError, rr.Code)
 }

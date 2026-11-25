@@ -102,7 +102,7 @@ func TestPages_Node_FullPage(t *testing.T) {
 	assert.False(t, activeMenuLink(body, "/person"))
 	assert.False(t, activeMenuLink(body, "/hello"))
 	assert.Contains(t, body, `id="table-nodes-body"`)
-	assert.Contains(t, body, `hx-get="/lightning/nodes"`)
+	assert.Contains(t, body, `hx-get="/api/v1/lightning/nodes"`)
 	assert.Contains(t, body, `id="node-panel"`)
 	assert.Contains(t, body, `id="node-info-slot"`)
 }
@@ -161,12 +161,12 @@ func TestPages_Person(t *testing.T) {
 
 	full := doPlain(h, http.MethodGet, "/person", nil)
 	assertFullPage(t, full, "Person")
-	assert.Contains(t, full.Body.String(), `hx-get="/users"`)
+	assert.Contains(t, full.Body.String(), `hx-get="/api/v1/users"`)
 	assert.True(t, activeMenuLink(full.Body.String(), "/person"))
 
 	frag := doHTMX(h, http.MethodGet, "/person", nil)
 	assertFragmentOnly(t, frag, "/person")
-	assert.Contains(t, frag.Body.String(), `hx-get="/users"`)
+	assert.Contains(t, frag.Body.String(), `hx-get="/api/v1/users"`)
 }
 
 // 7
@@ -175,8 +175,8 @@ func TestPages_LayoutContent(t *testing.T) {
 
 	body := doPlain(h, http.MethodGet, "/node", nil).Body.String()
 
-	assert.Contains(t, body, `sse-connect="/stream-event"`)
-	assert.Contains(t, body, `hx-get="/version"`)
+	assert.Contains(t, body, `sse-connect="/api/v1/stream-event"`)
+	assert.Contains(t, body, `hx-get="/api/v1/version"`)
 	assert.Contains(t, body, `id="toaster"`)
 	assert.Contains(t, body, `id="confirm-dialog"`)
 	assert.Regexp(t, `<script[^>]*src="[^"]*htmx\.org@[^"/]+/dist/ext/sse\.js"`, body, "sse extension must be pinned")
@@ -202,7 +202,7 @@ func TestPages_EveryLinkResolves(t *testing.T) {
 	for _, page := range pages {
 		sources = append(sources, source{"page " + page, doPlain(h, http.MethodGet, page, nil).Body.String()})
 	}
-	for _, frag := range []string{"/lightning/nodes", "/node/panel?id=lnd-0", "/lightning/nodeInfo?id=lnd-0"} {
+	for _, frag := range []string{"/api/v1/lightning/nodes", "/node/panel?id=lnd-0", "/api/v1/lightning/nodeInfo?id=lnd-0"} {
 		rr := doHTMX(h, http.MethodGet, frag, nil)
 		assert.Equal(t, http.StatusOK, rr.Code, frag)
 		sources = append(sources, source{"fragment " + frag, rr.Body.String()})
@@ -240,10 +240,10 @@ func TestPages_EveryLinkResolves(t *testing.T) {
 	}
 	assert.GreaterOrEqual(t, links, 10, "the node screens should expose their hx-* links")
 	for _, want := range []string{
-		"GET /node/panel", "GET /lightning/nodes", "GET /lightning/nodeInfo", "GET /lightning/uri", "GET /lightning/balance",
-		"GET /lightning/channels", "POST /lightning/wallet/unlock", "PUT /lightning/alias",
-		"POST /lightning/peer", "POST /lightning/channel", "POST /lightning/invoice", "POST /lightning/paiment",
-		"GET /users",
+		"GET /node/panel", "GET /api/v1/lightning/nodes", "GET /api/v1/lightning/nodeInfo", "GET /api/v1/lightning/uri", "GET /api/v1/lightning/balance",
+		"GET /api/v1/lightning/channels", "POST /api/v1/lightning/wallet/unlock", "PUT /api/v1/lightning/alias",
+		"POST /api/v1/lightning/peer", "POST /api/v1/lightning/channel", "POST /api/v1/lightning/invoice", "POST /api/v1/lightning/payment",
+		"GET /api/v1/users",
 	} {
 		assert.True(t, seen[want], "the crawled screens should link %s", want)
 	}
@@ -254,7 +254,7 @@ func TestPages_EveryLinkResolves(t *testing.T) {
 		}
 		body := src.body
 		for _, m := range sseLinkRe.FindAllStringSubmatch(body, -1) {
-			assert.Equal(t, "/stream-event", m[1])
+			assert.Equal(t, "/api/v1/stream-event", m[1])
 			// blocking handler: run it with an already-cancelled context so it returns at once
 			ctx, cancel := context.WithCancel(context.Background())
 			cancel()
@@ -264,7 +264,7 @@ func TestPages_EveryLinkResolves(t *testing.T) {
 			assert.Equal(t, "text/event-stream", rr.Header().Get("Content-Type"))
 		}
 	}
-	assert.Equal(t, http.StatusOK, doHTMX(h, http.MethodGet, "/version", nil).Code)
+	assert.Equal(t, http.StatusOK, doHTMX(h, http.MethodGet, "/api/v1/version", nil).Code)
 }
 
 // 10
@@ -313,6 +313,52 @@ func TestRouting_PagesAndLegacyPrefix(t *testing.T) {
 	for _, p := range []string{"/metrics", "/health", "/ready"} {
 		assert.Equal(t, http.StatusNotFound, doPlain(h, http.MethodGet, p, nil).Code, "%s must not be on the app router", p)
 	}
+}
+
+// every resource route answers under /api/v1 with its own verb
+func TestRouting_APIRoutesUnderPrefix(t *testing.T) {
+	h := testsupport.NewTestHarness()
+	h.MockUserRepo.On("FindAll", mock.Anything).Return([]domain.UserModel{}, nil).Maybe()
+	h.MockNodeRepo.On("GetNodesIds").Return([]string{"lnd-0"}, nil).Maybe()
+	h.GrpcFactory.State.On("GetState", mock.Anything, mock.Anything).Return(&lnrpc.GetStateResponse{State: lnrpc.WalletState_LOCKED}, nil).Maybe()
+	h.GrpcFactory.Lightning.On("GetInfo", mock.Anything, mock.Anything).Return(&lnrpc.GetInfoResponse{Alias: "alice"}, nil).Maybe()
+
+	routes := []struct{ method, path string }{
+		{http.MethodGet, "/api/v1/lightning/nodes"},
+		{http.MethodGet, "/api/v1/lightning/nodeInfo"},
+		{http.MethodGet, "/api/v1/lightning/uri"},
+		{http.MethodGet, "/api/v1/lightning/balance"},
+		{http.MethodGet, "/api/v1/lightning/channels"},
+		{http.MethodPost, "/api/v1/lightning/channel"},
+		{http.MethodPost, "/api/v1/lightning/channel/close"},
+		{http.MethodPost, "/api/v1/lightning/peer"},
+		{http.MethodPost, "/api/v1/lightning/invoice"},
+		{http.MethodPost, "/api/v1/lightning/payment"},
+		{http.MethodPost, "/api/v1/lightning/wallet/unlock"},
+		{http.MethodPut, "/api/v1/lightning/alias"},
+		{http.MethodGet, "/api/v1/users"},
+		{http.MethodGet, "/api/v1/version"},
+	}
+	for _, r := range routes {
+		var form url.Values
+		if r.method != http.MethodGet {
+			form = url.Values{}
+		}
+		rr := doPlain(h, r.method, r.path, form)
+		assert.NotEqual(t, http.StatusNotFound, rr.Code, "%s %s is not routed", r.method, r.path)
+		assert.NotEqual(t, http.StatusMethodNotAllowed, rr.Code, "%s %s has the wrong method", r.method, r.path)
+	}
+}
+
+// the metrics label of an API route is its full registered path
+func TestMetrics_APIRouteLabel(t *testing.T) {
+	h := testsupport.NewTestHarness()
+	h.MockNodeRepo.On("GetNodesIds").Return([]string{}, nil).Maybe()
+	doPlain(h, http.MethodGet, "/api/v1/lightning/nodes", nil)
+
+	body := doOps(h, http.MethodGet, "/metrics").Body.String()
+
+	assert.Contains(t, body, `http_requests_total{handler="/api/v1/lightning/nodes",method="GET"} 1`)
 }
 
 // 13

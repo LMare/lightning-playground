@@ -16,7 +16,7 @@ func TestHandleShowUri_InvalidID(t *testing.T) {
 	h := testsupport.NewTestHarness()
 
 	// Create a test request with invalid ID
-	req := httptest.NewRequest("GET", "/lightning/uri?id=invalid@id#", nil)
+	req := httptest.NewRequest("GET", "/api/v1/lightning/uri?id=invalid@id#", nil)
 
 	// Create a response writer
 	rr := httptest.NewRecorder()
@@ -32,7 +32,7 @@ func TestHandleShowUri_InvalidID(t *testing.T) {
 func TestHandleShowUri_MissingID(t *testing.T) {
 	h := testsupport.NewTestHarness()
 	// Create a test request without ID
-	req := httptest.NewRequest("GET", "/lightning/uri", nil)
+	req := httptest.NewRequest("GET", "/api/v1/lightning/uri", nil)
 
 	// Create a response writer
 	rr := httptest.NewRecorder()
@@ -48,7 +48,7 @@ func TestHandleShowUri_MissingID(t *testing.T) {
 func TestHandleNodeInfo_InvalidID(t *testing.T) {
 	h := testsupport.NewTestHarness()
 	// Create a test request with invalid ID
-	req := httptest.NewRequest("GET", "/lightning/nodeInfo?id=node!invalid", nil)
+	req := httptest.NewRequest("GET", "/api/v1/lightning/nodeInfo?id=node!invalid", nil)
 
 	// Create a response writer
 	rr := httptest.NewRecorder()
@@ -65,7 +65,7 @@ func TestHandleAddPeer_InvalidID(t *testing.T) {
 	h := testsupport.NewTestHarness()
 	// Create a test request with invalid ID
 	body := strings.NewReader("id=invalid@id&uri=02abc@host:port")
-	req := httptest.NewRequest("POST", "/lightning/peer", body)
+	req := httptest.NewRequest("POST", "/api/v1/lightning/peer", body)
 
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
@@ -84,7 +84,7 @@ func TestHandleOpenChannel_InvalidID(t *testing.T) {
 	h := testsupport.NewTestHarness()
 	// Create a test request with invalid ID
 	body := strings.NewReader("id=invalid#id&pubKey=02abc123&amount=100000")
-	req := httptest.NewRequest("POST", "/lightning/channel", body)
+	req := httptest.NewRequest("POST", "/api/v1/lightning/channel", body)
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
 	// Create a response writer
@@ -102,7 +102,7 @@ func TestHandleOpenChannel_InvalidAmount(t *testing.T) {
 	h := testsupport.NewTestHarness()
 	// Create a test request with invalid amount
 	body := strings.NewReader("id=node1&pubKey=02abc123&amount=not_a_number")
-	req := httptest.NewRequest("POST", "/lightning/channel", body)
+	req := httptest.NewRequest("POST", "/api/v1/lightning/channel", body)
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
 	// Create a response writer
@@ -120,7 +120,7 @@ func TestHandleCreateInvoice_InvalidID(t *testing.T) {
 	h := testsupport.NewTestHarness()
 	// Create a test request with invalid ID
 	body := strings.NewReader("id=bad$id&memo=test&amount=1000")
-	req := httptest.NewRequest("POST", "/lightning/invoice", body)
+	req := httptest.NewRequest("POST", "/api/v1/lightning/invoice", body)
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
 	// Create a response writer
@@ -138,7 +138,7 @@ func TestHandleCreateInvoice_InvalidAmount(t *testing.T) {
 	h := testsupport.NewTestHarness()
 	// Create a test request with invalid amount
 	body := strings.NewReader("id=node1&memo=test&amount=abc")
-	req := httptest.NewRequest("POST", "/lightning/invoice", body)
+	req := httptest.NewRequest("POST", "/api/v1/lightning/invoice", body)
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
 	// Create a response writer
@@ -156,7 +156,7 @@ func TestHandleMakePayment_InvalidID(t *testing.T) {
 	h := testsupport.NewTestHarness()
 	// Create a test request with invalid ID
 	body := strings.NewReader("id=invalid.id&paymentRequest=ln_invoice_123")
-	req := httptest.NewRequest("POST", "/lightning/paiment", body)
+	req := httptest.NewRequest("POST", "/api/v1/lightning/payment", body)
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
 	// Create a response writer
@@ -174,7 +174,7 @@ func TestHandleMakePayment_MissingRequest(t *testing.T) {
 	h := testsupport.NewTestHarness()
 	// Create a test request without paymentRequest
 	body := strings.NewReader("id=node1")
-	req := httptest.NewRequest("POST", "/lightning/paiment", body)
+	req := httptest.NewRequest("POST", "/api/v1/lightning/payment", body)
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
 	// Create a response writer
@@ -192,7 +192,7 @@ func TestHandleUpdateNodeAlias_InvalidID(t *testing.T) {
 	h := testsupport.NewTestHarness()
 	// Create a test request with invalid ID
 	body := strings.NewReader("id=invalid!id&alias=myAlias&color=#FF0000")
-	req := httptest.NewRequest("PUT", "/lightning/alias", body)
+	req := httptest.NewRequest("PUT", "/api/v1/lightning/alias", body)
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
 	// Create a response writer
@@ -210,7 +210,7 @@ func TestHandleUpdateNodeAlias_MissingID(t *testing.T) {
 	h := testsupport.NewTestHarness()
 	// Create a test request without ID
 	body := strings.NewReader("alias=myAlias&color=#FF0000")
-	req := httptest.NewRequest("PUT", "/lightning/alias", body)
+	req := httptest.NewRequest("PUT", "/api/v1/lightning/alias", body)
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
 	// Create a response writer

@@ -57,7 +57,7 @@ func TestFragments_NodeRowsCarryTheirBehaviour(t *testing.T) {
 	h := testsupport.NewTestHarness()
 	mockNodes(h, lnrpc.WalletState_LOCKED, "lnd-0")
 
-	body := doHTMX(h, http.MethodGet, "/lightning/nodes", nil).Body.String()
+	body := doHTMX(h, http.MethodGet, "/api/v1/lightning/nodes", nil).Body.String()
 
 	row := rowTag(body, "lnd-0")
 	assert.NotEmpty(t, row)
@@ -80,7 +80,7 @@ func TestFragments_SelectedRowIsRenderedByTheServer(t *testing.T) {
 	h := testsupport.NewTestHarness()
 	mockNodes(h, lnrpc.WalletState_SERVER_ACTIVE, "lnd-0", "lnd-1")
 
-	body := doHTMX(h, http.MethodGet, "/lightning/nodes?selected=lnd-1", nil).Body.String()
+	body := doHTMX(h, http.MethodGet, "/api/v1/lightning/nodes?selected=lnd-1", nil).Body.String()
 
 	selected := rowTag(body, "lnd-1")
 	assert.Contains(t, selected, `class="selected"`)
@@ -91,12 +91,12 @@ func TestFragments_SelectedRowIsRenderedByTheServer(t *testing.T) {
 	assert.NotContains(t, other, "aria-current")
 
 	// without the parameter nothing is selected
-	plain := doHTMX(h, http.MethodGet, "/lightning/nodes", nil).Body.String()
+	plain := doHTMX(h, http.MethodGet, "/api/v1/lightning/nodes", nil).Body.String()
 	assert.NotContains(t, plain, "aria-current")
 
 	// JSON ignores the UI-only parameter
-	with := do(h, http.MethodGet, "/lightning/nodes?selected=lnd-1", nil)
-	without := do(h, http.MethodGet, "/lightning/nodes", nil)
+	with := do(h, http.MethodGet, "/api/v1/lightning/nodes?selected=lnd-1", nil)
+	without := do(h, http.MethodGet, "/api/v1/lightning/nodes", nil)
 	assert.Equal(t, http.StatusOK, with.Code)
 	assert.Equal(t, without.Body.String(), with.Body.String())
 }
@@ -106,7 +106,7 @@ func TestFragments_RGAA_Nodes(t *testing.T) {
 	h := testsupport.NewTestHarness()
 	mockNodes(h, lnrpc.WalletState_SERVER_ACTIVE, "lnd-0", "lnd-1")
 
-	body := doHTMX(h, http.MethodGet, "/lightning/nodes", nil).Body.String()
+	body := doHTMX(h, http.MethodGet, "/api/v1/lightning/nodes", nil).Body.String()
 
 	for i := 0; i < 2; i++ {
 		row := fmt.Sprintf("table-nodes-body-row-%d", i)
@@ -150,7 +150,7 @@ func TestFragments_RGAA_Users(t *testing.T) {
 	h := testsupport.NewTestHarness()
 	h.MockUserRepo.On("FindAll", mock.Anything).Return([]domain.UserModel{{Nom: "Doe", Prenom: "John", Age: 30}}, nil)
 
-	body := doHTMX(h, http.MethodGet, "/users", nil).Body.String()
+	body := doHTMX(h, http.MethodGet, "/api/v1/users", nil).Body.String()
 
 	assertRowHeader(t, body, "table-persons-body-row-0")
 	for _, col := range []string{"nom", "prenom", "age"} {
@@ -172,17 +172,17 @@ func TestPanel_RendersSectionsAndForms(t *testing.T) {
 	assert.NotContains(t, body, "hx-vals")
 
 	for _, section := range []string{"nodeInfo", "uri", "balance", "channels"} {
-		tag := tagContaining(body, `hx-get="/lightning/`+section+`?id=lnd-0"`)
+		tag := tagContaining(body, `hx-get="/api/v1/lightning/`+section+`?id=lnd-0"`)
 		assert.NotEmpty(t, tag, section)
 		assert.Regexp(t, `hx-trigger="[^"]*\bload\b`, tag, section)
 	}
-	assert.Contains(t, tagContaining(body, `hx-get="/lightning/nodeInfo?id=lnd-0"`), "alias-updated from:body")
-	assert.Contains(t, tagContaining(body, `hx-get="/lightning/channels?id=lnd-0"`), "channel-closed from:body")
-	balance := tagContaining(body, `hx-get="/lightning/balance?id=lnd-0"`)
+	assert.Contains(t, tagContaining(body, `hx-get="/api/v1/lightning/nodeInfo?id=lnd-0"`), "alias-updated from:body")
+	assert.Contains(t, tagContaining(body, `hx-get="/api/v1/lightning/channels?id=lnd-0"`), "channel-closed from:body")
+	balance := tagContaining(body, `hx-get="/api/v1/lightning/balance?id=lnd-0"`)
 	assert.Contains(t, balance, "channel-closed from:body")
 	assert.Contains(t, balance, "click from:#balance-refresh")
 
-	for _, path := range []string{"/lightning/peer", "/lightning/channel", "/lightning/invoice", "/lightning/paiment"} {
+	for _, path := range []string{"/api/v1/lightning/peer", "/api/v1/lightning/channel", "/api/v1/lightning/invoice", "/api/v1/lightning/payment"} {
 		form := formBody(body, "post", path)
 		assert.NotEmpty(t, form, "form %s", path)
 		assert.Contains(t, form, `name="id" value="lnd-0"`, "form %s", path)
@@ -223,14 +223,14 @@ func TestAlias_HTMXSuccessTriggersAliasUpdated(t *testing.T) {
 	h.GrpcFactory.Lightning.On("SetColor", mock.Anything, mock.Anything).Return(&lnrpc.SetColorResponse{}, nil)
 	form := url.Values{"id": {"lnd-0"}, "alias": {"bob"}, "color": {"#000000"}}
 
-	ok := doHTMX(h, http.MethodPut, "/lightning/alias", form)
+	ok := doHTMX(h, http.MethodPut, "/api/v1/lightning/alias", form)
 	assert.Contains(t, ok.Header().Get("HX-Trigger"), "alias-updated")
 
-	invalid := doHTMX(h, http.MethodPut, "/lightning/alias", url.Values{"id": {"bad id"}, "alias": {"bob"}, "color": {"#000000"}})
+	invalid := doHTMX(h, http.MethodPut, "/api/v1/lightning/alias", url.Values{"id": {"bad id"}, "alias": {"bob"}, "color": {"#000000"}})
 	assert.Empty(t, invalid.Header().Get("HX-Trigger"))
 	assert.Contains(t, invalid.Body.String(), "❌")
 
-	plain := do(h, http.MethodPut, "/lightning/alias", form)
+	plain := do(h, http.MethodPut, "/api/v1/lightning/alias", form)
 	assert.Equal(t, http.StatusNoContent, plain.Code)
 }
 
@@ -238,7 +238,7 @@ func TestAlias_HTMXLndFailureDoesNotTrigger(t *testing.T) {
 	h := testsupport.NewTestHarness()
 	h.GrpcFactory.Lightning.On("SetAlias", mock.Anything, mock.Anything).Return(nil, assert.AnError)
 
-	rr := doHTMX(h, http.MethodPut, "/lightning/alias", url.Values{"id": {"lnd-0"}, "alias": {"bob"}, "color": {"#000000"}})
+	rr := doHTMX(h, http.MethodPut, "/api/v1/lightning/alias", url.Values{"id": {"lnd-0"}, "alias": {"bob"}, "color": {"#000000"}})
 
 	assert.Empty(t, rr.Header().Get("HX-Trigger"))
 	assert.Contains(t, rr.Body.String(), "❌")
@@ -251,15 +251,15 @@ func TestFragments_NodeInfoRendersTheAliasForm(t *testing.T) {
 		Alias: "alice", Color: "#ff0000", Chains: []*lnrpc.Chain{{Network: "simnet"}}, BlockHeight: 42,
 	}, nil)
 
-	body := doHTMX(h, http.MethodGet, "/lightning/nodeInfo?id=lnd-0", nil).Body.String()
+	body := doHTMX(h, http.MethodGet, "/api/v1/lightning/nodeInfo?id=lnd-0", nil).Body.String()
 
-	assert.Contains(t, body, `hx-put="/lightning/alias"`)
+	assert.Contains(t, body, `hx-put="/api/v1/lightning/alias"`)
 	assert.Contains(t, body, `name="alias" value="alice"`)
 	assert.Contains(t, body, `name="color" value="#ff0000"`)
 	assert.Contains(t, body, `name="id" value="lnd-0"`)
 
 	// JSON keeps its shape and carries no markup
-	js := do(h, http.MethodGet, "/lightning/nodeInfo?id=lnd-0", nil).Body.String()
+	js := do(h, http.MethodGet, "/api/v1/lightning/nodeInfo?id=lnd-0", nil).Body.String()
 	assert.Contains(t, js, `"alias":"alice"`)
 	assert.NotContains(t, js, "hx-put")
 }
@@ -270,7 +270,7 @@ func TestDualEndpoints_VaryOnHXRequest(t *testing.T) {
 	mockNodes(h, lnrpc.WalletState_SERVER_ACTIVE, "lnd-0")
 	h.MockUserRepo.On("FindAll", mock.Anything).Return([]domain.UserModel{{Nom: "Doe", Prenom: "John", Age: 30}}, nil)
 
-	for _, path := range []string{"/lightning/nodes", "/users"} {
+	for _, path := range []string{"/api/v1/lightning/nodes", "/api/v1/users"} {
 		html := doHTMX(h, http.MethodGet, path, nil)
 		js := do(h, http.MethodGet, path, nil)
 		for name, rr := range map[string]*httptest.ResponseRecorder{"html": html, "json": js} {
@@ -287,7 +287,7 @@ func TestOps_ProbesAndMetricsOnly(t *testing.T) {
 	for _, p := range []string{"/health", "/ready", "/metrics"} {
 		assert.Equal(t, http.StatusOK, doOps(h, http.MethodGet, p).Code, p)
 	}
-	for _, p := range []string{"/node", "/lightning/nodes", "/users", "/version", "/asset/js/generic.js"} {
+	for _, p := range []string{"/node", "/api/v1/lightning/nodes", "/api/v1/users", "/api/v1/version", "/asset/js/generic.js"} {
 		assert.Equal(t, http.StatusNotFound, doOps(h, http.MethodGet, p).Code, "%s must not be on the ops router", p)
 	}
 }

@@ -33,7 +33,7 @@ func TestHTMX_ListUsers(t *testing.T) {
 	h := testsupport.NewTestHarness()
 	h.MockUserRepo.On("FindAll", mock.Anything).Return([]domain.UserModel{{Nom: "Doe", Prenom: "John", Age: 30}}, nil)
 
-	rr := doHTMX(h, http.MethodGet, "/users", nil)
+	rr := doHTMX(h, http.MethodGet, "/api/v1/users", nil)
 
 	assert.Equal(t, http.StatusOK, rr.Code)
 	assert.Equal(t, "text/html", rr.Header().Get("Content-Type"))
@@ -47,7 +47,7 @@ func TestHTMX_ListNodes(t *testing.T) {
 	h.GrpcFactory.State.On("GetState", mock.Anything, mock.Anything).Return(&lnrpc.GetStateResponse{State: lnrpc.WalletState_SERVER_ACTIVE}, nil)
 	h.GrpcFactory.Lightning.On("GetInfo", mock.Anything, mock.Anything).Return(&lnrpc.GetInfoResponse{Alias: "alice", Color: "#ff0000"}, nil)
 
-	rr := doHTMX(h, http.MethodGet, "/lightning/nodes", nil)
+	rr := doHTMX(h, http.MethodGet, "/api/v1/lightning/nodes", nil)
 
 	assert.Equal(t, http.StatusOK, rr.Code)
 	assert.Contains(t, rr.Body.String(), `data-id="lnd-0"`)
@@ -61,7 +61,7 @@ func TestHTMX_ListNodes_LockedNode(t *testing.T) {
 	h.MockNodeRepo.On("GetNodesIds").Return([]string{"lnd-0"}, nil)
 	h.GrpcFactory.State.On("GetState", mock.Anything, mock.Anything).Return(&lnrpc.GetStateResponse{State: lnrpc.WalletState_LOCKED}, nil)
 
-	rr := doHTMX(h, http.MethodGet, "/lightning/nodes", nil)
+	rr := doHTMX(h, http.MethodGet, "/api/v1/lightning/nodes", nil)
 
 	assert.Equal(t, http.StatusOK, rr.Code)
 	assert.Contains(t, rr.Body.String(), `data-id="lnd-0"`)
@@ -75,7 +75,7 @@ func TestHTMX_NodeInfo(t *testing.T) {
 		Alias: "alice", Chains: []*lnrpc.Chain{{Network: "simnet"}}, BlockHeight: 42,
 	}, nil)
 
-	rr := doHTMX(h, http.MethodGet, "/lightning/nodeInfo?id=lnd-0", nil)
+	rr := doHTMX(h, http.MethodGet, "/api/v1/lightning/nodeInfo?id=lnd-0", nil)
 
 	assert.Equal(t, http.StatusOK, rr.Code)
 	assert.Contains(t, rr.Body.String(), "Network : simnet")
@@ -87,7 +87,7 @@ func TestHTMX_UriUsesTheTruncateHelper(t *testing.T) {
 	uri := "0123456789abcdef@1.2.3.4:9735"
 	h.GrpcFactory.Lightning.On("GetInfo", mock.Anything, mock.Anything).Return(&lnrpc.GetInfoResponse{Uris: []string{uri}}, nil)
 
-	rr := doHTMX(h, http.MethodGet, "/lightning/uri?id=lnd-0", nil)
+	rr := doHTMX(h, http.MethodGet, "/api/v1/lightning/uri?id=lnd-0", nil)
 
 	assert.Equal(t, http.StatusOK, rr.Code)
 	assert.Contains(t, rr.Body.String(), "0123456...9abcdef@1.2.3.4:9735")
@@ -97,10 +97,10 @@ func TestHTMX_Messages(t *testing.T) {
 	h := testsupport.NewTestHarness()
 	h.GrpcFactory.Lightning.On("ConnectPeer", mock.Anything, mock.Anything).Return(&lnrpc.ConnectPeerResponse{}, nil)
 
-	ok := doHTMX(h, http.MethodPost, "/lightning/peer", url.Values{"id": {"lnd-0"}, "uri": {"02ab@h:9735"}})
+	ok := doHTMX(h, http.MethodPost, "/api/v1/lightning/peer", url.Values{"id": {"lnd-0"}, "uri": {"02ab@h:9735"}})
 	assert.Equal(t, http.StatusOK, ok.Code)
 	assert.Contains(t, ok.Body.String(), "✅")
 
-	ko := doHTMX(h, http.MethodPost, "/lightning/peer", url.Values{"id": {"bad id"}})
+	ko := doHTMX(h, http.MethodPost, "/api/v1/lightning/peer", url.Values{"id": {"bad id"}})
 	assert.Contains(t, ko.Body.String(), "❌")
 }
