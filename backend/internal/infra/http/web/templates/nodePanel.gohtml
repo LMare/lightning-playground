@@ -12,130 +12,130 @@
 
 <input type="hidden" id="selected-node" name="selected" value="{{.ID}}">
 
-	<div style="flex-direction:column">
+<div style="flex-direction:column">
 
-		<!-- URI -->
-		<section class="mt-6 mx-6 w-100 bg-base-100 p-4 rounded-box shadow-md">
-			<h2 class="text-xl text-center font-semibold mb-2">⚡️ URI ⚡️</h2>
-			<p class="text-base text-gray-700 mb-4">You can share the url of your lightning node</p>
-			<div
-								hx-get="/lightning/uri?id={{.ID}}"
-				hx-trigger="load"
+	<!-- URI -->
+	<section class="mt-6 mx-6 w-100 bg-base-100 p-4 rounded-box shadow-md">
+		<h2 class="text-xl text-center font-semibold mb-2">⚡️ URI ⚡️</h2>
+		<p class="text-base text-gray-700 mb-4">You can share the url of your lightning node</p>
+		<div
+			hx-get="/lightning/uri?id={{.ID}}"
+			hx-trigger="load"
+			hx-target="this"
+			hx-swap="innerHTML">
+		</div>
+	</section>
+
+	<!-- Balance -->
+	<section class="mt-6 mx-6 w-100 bg-base-100 p-4 rounded-box shadow-md">
+		<h2 class="text-xl text-center font-semibold mb-2">⚡️ Balance ⚡️ <button id="balance-refresh" type="button" class="text-sm" title="Refresh">↻</button></h2>
+		<div
+			hx-get="/lightning/balance?id={{.ID}}"
+			hx-trigger="load, channel-closed from:body, click from:#balance-refresh"
+			hx-target="this"
+			hx-swap="innerHTML">
+		</div>
+	</section>
+
+	<!-- Channels -->
+	<section class="mt-6 mx-6 w-100 bg-base-100 p-4 rounded-box shadow-md">
+		<h2 class="text-xl text-center font-semibold mb-2">⚡️ Channels ⚡️</h2>
+		<table class="table">
+			<thead><tr><th scope="col" id="channel-peer">Peer</th><th scope="col" id="channel-capacity">Capacity</th><th scope="col" id="channel-local">Local</th><th scope="col" id="channel-remote">Remote</th><th scope="col" id="channel-status">Status</th><th scope="col" id="channel-actions"><span class="sr-only">Actions</span></th></tr></thead>
+			<tbody
+				id="table-channels-body"
+				hx-get="/lightning/channels?id={{.ID}}"
+				hx-trigger="load, channel-closed from:body"
 				hx-target="this"
 				hx-swap="innerHTML">
+			</tbody>
+		</table>
+	</section>
+
+	<!-- Pairs -->
+	<section class="mt-6 mx-6 w-100 bg-base-100 p-4 rounded-box shadow-md">
+		<h2 class="text-xl text-center font-semibold mb-2">⚡️ Pairs ⚡️</h2>
+		<p class="text-base text-gray-700 mb-4">Connect to a new peer</p>
+		<form hx-post="/lightning/peer" hx-swap="none" class="mt-2">
+			<input type="hidden" name="id" value="{{.ID}}">
+			<label for="uri" class="text-base text-gray-700 mb-4">Add a pair</label>
+			<input type="text" name="uri" id="uri" placeholder="uri : &lt;pubkey&gt;@&lt;ip&gt;:&lt;port&gt;" class="border px-2 py-1 rounded" />
+			<button type="submit" class="ml-2 text-sm" aria-label="Connect" title="Connect">🔗</button>
+		</form>
+	</section>
+
+</div>
+
+<div style="flex-direction:column">
+	<!-- Create Channel -->
+	<section class="mt-6 mx-6 w-100 bg-base-100 p-4 rounded-box shadow-md">
+		<h2 class="text-xl text-center font-semibold mb-2">⚡️ New Channel ⚡️</h2>
+		<p class="text-base text-gray-700 mb-4">🚧 Soon a more friendly way to create a channel 🏗️</p>
+		<form hx-post="/lightning/channel" hx-swap="none" class="mt-2" style="display:flex; flex-direction:column">
+			<input type="hidden" name="id" value="{{.ID}}">
+			<!-- TODO : transform with a list of pairs -->
+			<label for="pubKey" class="text-base text-gray-700">Public Key</label>
+			<input type="text" name="pubKey" id="pubKey" class="border px-2 py-1 rounded" />
+			<label for="amount" class="text-base text-gray-700">Amount</label>
+			<input type="number" name="amount" id="amount" min="20000" placeholder="sats" class="border px-2 py-1 rounded" />
+			<div class="text-center">
+				<button type="submit" class="mt-2 border border-gray-300 p-1 rounded text-sm" aria-label="Create channel" title="Create channel">🛠️ ⚡🔗⚡</button>
 			</div>
-		</section>
+		</form>
+	</section>
 
-		<!-- Balance -->
-		<section class="mt-6 mx-6 w-100 bg-base-100 p-4 rounded-box shadow-md">
-			<h2 class="text-xl text-center font-semibold mb-2">⚡️ Balance ⚡️ <button id="balance-refresh" type="button" class="text-sm" title="Refresh">↻</button></h2>
-			<div
-								hx-get="/lightning/balance?id={{.ID}}"
-				hx-trigger="load, channel-closed from:body, click from:#balance-refresh"
-				hx-target="this"
-				hx-swap="innerHTML">
-			</div>
-		</section>
-
-		<!-- Channels -->
-		<section class="mt-6 mx-6 w-100 bg-base-100 p-4 rounded-box shadow-md">
-			<h2 class="text-xl text-center font-semibold mb-2">⚡️ Channels ⚡️</h2>
-			<table class="table">
-				<thead><tr><th scope="col" id="channel-peer">Peer</th><th scope="col" id="channel-capacity">Capacity</th><th scope="col" id="channel-local">Local</th><th scope="col" id="channel-remote">Remote</th><th scope="col" id="channel-status">Status</th><th scope="col" id="channel-actions"><span class="sr-only">Actions</span></th></tr></thead>
-				<tbody
-					id="table-channels-body"
-										hx-get="/lightning/channels?id={{.ID}}"
-					hx-trigger="load, channel-closed from:body"
-					hx-target="this"
-					hx-swap="innerHTML">
-				</tbody>
-			</table>
-		</section>
-
-		<!-- Pairs -->
-		<section class="mt-6 mx-6 w-100 bg-base-100 p-4 rounded-box shadow-md">
-			<h2 class="text-xl text-center font-semibold mb-2">⚡️ Pairs ⚡️</h2>
-			<p class="text-base text-gray-700 mb-4">Connect to a new peer</p>
-			<form hx-post="/lightning/peer" hx-swap="none" class="mt-2">
+	<!-- Create Invoice -->
+	<section class="mt-6 mx-6 w-100 bg-base-100 p-4 rounded-box shadow-md">
+		<h2 class="text-xl text-center font-semibold mb-2">⚡️ New Invoice ⚡️</h2>
+		<div id="invoice-form">
+			<p class="text-base text-gray-700 mb-4">Create a quick invoice 🪙</p>
+			<form
+					hx-post="/lightning/invoice"
+					hx-swap="innerHTML"
+					hx-target="#invoice-result"
+					hx-on="htmx:afterRequest:showInvoice()"
+					class="mt-2"
+					style="display:flex; flex-direction:column">
 				<input type="hidden" name="id" value="{{.ID}}">
-				<label for="uri" class="text-base text-gray-700 mb-4">Add a pair</label>
-				<input type="text" name="uri" id="uri" placeholder="uri : &lt;pubkey&gt;@&lt;ip&gt;:&lt;port&gt;" class="border px-2 py-1 rounded" />
-				<button type="submit" class="ml-2 text-sm" aria-label="Connect" title="Connect">🔗</button>
-			</form>
-		</section>
-
-	</div>
-
-	<div style="flex-direction:column">
-		<!-- Create Channel -->
-		<section class="mt-6 mx-6 w-100 bg-base-100 p-4 rounded-box shadow-md">
-			<h2 class="text-xl text-center font-semibold mb-2">⚡️ New Channel ⚡️</h2>
-			<p class="text-base text-gray-700 mb-4">🚧 Soon a more friendly way to create a channel 🏗️</p>
-			<form hx-post="/lightning/channel" hx-swap="none" class="mt-2" style="display:flex; flex-direction:column">
-				<input type="hidden" name="id" value="{{.ID}}">
-				<!-- TODO : transform with a list of pairs -->
-				<label for="pubKey" class="text-base text-gray-700">Public Key</label>
-				<input type="text" name="pubKey" id="pubKey" class="border px-2 py-1 rounded" />
-				<label for="amount" class="text-base text-gray-700">Amount</label>
-				<input type="number" name="amount" id="amount" min="20000" placeholder="sats" class="border px-2 py-1 rounded" />
+				<label for="memo" class="text-base text-gray-700">Memo</label>
+				<input type="text" name="memo" id="memo" class="border px-2 py-1 rounded" />
+				<label for="invoice-amount" class="text-base text-gray-700">Amount 🪙</label>
+				<input type="number" name="amount" id="invoice-amount" placeholder="sats" class="border px-2 py-1 rounded" />
 				<div class="text-center">
-					<button type="submit" class="mt-2 border border-gray-300 p-1 rounded text-sm" aria-label="Create channel" title="Create channel">🛠️ ⚡🔗⚡</button>
+					<button type="submit" class="mt-2 border border-gray-300 p-1 rounded text-sm" aria-label="Create invoice" title="Create invoice">🧾⚡</button>
 				</div>
 			</form>
-		</section>
-
-		<!-- Create Invoice -->
-		<section class="mt-6 mx-6 w-100 bg-base-100 p-4 rounded-box shadow-md">
-			<h2 class="text-xl text-center font-semibold mb-2">⚡️ New Invoice ⚡️</h2>
-			<div id="invoice-form">
-				<p class="text-base text-gray-700 mb-4">Create a quick invoice 🪙</p>
-				<form
-						hx-post="/lightning/invoice"
-						hx-swap="innerHTML"
-						hx-target="#invoice-result"
-						hx-on="htmx:afterRequest:showInvoice()"
-						class="mt-2"
-						style="display:flex; flex-direction:column">
-					<input type="hidden" name="id" value="{{.ID}}">
-					<label for="memo" class="text-base text-gray-700">Memo</label>
-					<input type="text" name="memo" id="memo" class="border px-2 py-1 rounded" />
-					<label for="invoice-amount" class="text-base text-gray-700">Amount 🪙</label>
-					<input type="number" name="amount" id="invoice-amount" placeholder="sats" class="border px-2 py-1 rounded" />
-					<div class="text-center">
-						<button type="submit" class="mt-2 border border-gray-300 p-1 rounded text-sm" aria-label="Create invoice" title="Create invoice">🧾⚡</button>
-					</div>
-				</form>
-			</div>
-			<div style="display:none; text-align:center" id="invoice-display">
-				<div id="invoice-result"></div>
-				<button type="button" onclick="resetInvoice()" title="Return" aria-label="Return">🔁</button>
-			</div>
-		</section>
-	</div>
+		</div>
+		<div style="display:none; text-align:center" id="invoice-display">
+			<div id="invoice-result"></div>
+			<button type="button" onclick="resetInvoice()" title="Return" aria-label="Return">🔁</button>
+		</div>
+	</section>
+</div>
 
 
-	<div style="flex-direction: column;">
-		<!-- Pay Invoice -->
-		<section class="mt-6 mx-6 w-100 bg-base-100 p-4 rounded-box shadow-md">
-			<h2 class="text-xl text-center font-semibold mb-2">⚡️ Pay Invoice ⚡️</h2>
-			<div id="pay-form">
-				<p class="text-base text-gray-700 mb-4">Pay a invoice 🪙</p>
-				<form
-						hx-post="/lightning/paiment"
-						hx-swap="none"
-						class="mt-2"
-						style="display:flex; flex-direction:column">
-					<input type="hidden" name="id" value="{{.ID}}">
-					<label for="invoice-pay" class="text-base text-gray-700">Invoice</label>
-					<textarea name="paymentRequest" cols="30" rows="8" id="invoice-pay" class="border px-2 py-1 rounded"></textarea>
-					<div class="text-center">
-						<button type="submit" class="mt-2 border border-gray-300 p-1 rounded text-sm" aria-label="Pay invoice" title="Pay invoice">💸⚡</button>
-					</div>
-				</form>
-			</div>
-			<div>
-				<!-- TODO faire un affichage du montant à payer ? -->
-			</div>
+<div style="flex-direction: column;">
+	<!-- Pay Invoice -->
+	<section class="mt-6 mx-6 w-100 bg-base-100 p-4 rounded-box shadow-md">
+		<h2 class="text-xl text-center font-semibold mb-2">⚡️ Pay Invoice ⚡️</h2>
+		<div id="pay-form">
+			<p class="text-base text-gray-700 mb-4">Pay a invoice 🪙</p>
+			<form
+					hx-post="/lightning/paiment"
+					hx-swap="none"
+					class="mt-2"
+					style="display:flex; flex-direction:column">
+				<input type="hidden" name="id" value="{{.ID}}">
+				<label for="invoice-pay" class="text-base text-gray-700">Invoice</label>
+				<textarea name="paymentRequest" cols="30" rows="8" id="invoice-pay" class="border px-2 py-1 rounded"></textarea>
+				<div class="text-center">
+					<button type="submit" class="mt-2 border border-gray-300 p-1 rounded text-sm" aria-label="Pay invoice" title="Pay invoice">💸⚡</button>
+				</div>
+			</form>
+		</div>
+		<div>
+			<!-- TODO faire un affichage du montant à payer ? -->
+		</div>
 
-		</section>
-	</div>
+	</section>
+</div>

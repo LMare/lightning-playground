@@ -4,6 +4,7 @@ import (
 	"embed"
 	"fmt"
 	"html/template"
+	"strings"
 )
 
 //go:embed templates/*.gohtml
@@ -31,4 +32,29 @@ func formatBTC(sat int64) string {
 // The name is a template literal and the value an int64, so nothing user-controlled is emitted.
 func satAttr(name string, value int64) template.HTMLAttr {
 	return template.HTMLAttr(fmt.Sprintf(`%s="%d"`, name, value))
+}
+
+// reduce an uri
+func truncateUri(s string, n int) string {
+	at := strings.Index(s, "@")
+	if at == -1 || at < 2*n {
+		return s // no @ or too short to truncate
+	}
+
+	start := s[:n]
+	end := s[at-n : at]
+	host := s[at:] // includes @
+
+	return start + "..." + end + host
+}
+
+// reduce a string
+func truncate(s string, n int) string {
+	at := len(s)
+	if at <= 2*n {
+		return s
+	}
+	start := s[:n]
+	end := s[at-n : at]
+	return start + "..." + end
 }
