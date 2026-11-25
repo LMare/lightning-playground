@@ -9,7 +9,7 @@ metadata:
   name: backend
   namespace : lightning-playground
 spec:
-  replicas: 1 # Scalability works, but for the SSE we need a brocker
+  replicas: 1 # SSE needs a broker (NATS, separate branch) before scaling: single hard-coded session
   selector:
     matchLabels:
       app: backend
@@ -29,19 +29,21 @@ spec:
           ports:
             - name: backend-port
               containerPort: 8080
+            - name: ops-port # /health, /ready, /metrics: cluster-internal, not behind the ingress
+              containerPort: 9090
           volumeMounts:
             - name: lnd-shared-data
               mountPath: /app/node-storage
           livenessProbe:
             httpGet:
               path: /health
-              port: 8080
+              port: ops-port
             initialDelaySeconds: 5
             periodSeconds: 10
           readinessProbe:
             httpGet:
               path: /ready
-              port: 8080
+              port: ops-port
             initialDelaySeconds: 5
             periodSeconds: 10
 

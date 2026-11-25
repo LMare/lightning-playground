@@ -14,3 +14,6 @@ spec:
   - name: backend
     port: 8080
     targetPort: backend-port
+  - name: ops
+    port: 9090
+    targetPort: ops-port

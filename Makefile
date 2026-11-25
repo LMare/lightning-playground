@@ -4,7 +4,6 @@ CLUSTER = lightning-playground
 load-images:
 	@VERSION=$$(cat version.txt); \
 	IMAGES=" \
-		LMare/lightning-playground-frontend:$$VERSION \
 		LMare/lightning-playground-backend:$$VERSION \
 		LMare/lightning-playground-sidecar-backend:$$VERSION \
 		LMare/lightning-playground-sidecar-btcd:$$VERSION \
@@ -37,7 +36,7 @@ bake-all:
 	docker buildx bake
 
 bake-app:
-	docker buildx bake backend frontend sidecars
+	docker buildx bake backend sidecars
 
 
 # This target adds an entry to the /etc/hosts file to map lightning-playground.local

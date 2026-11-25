@@ -1,0 +1,25 @@
+# Ingress of the application (pages, fragments, JSON, SSE, assets): routes the app port only.
+# The ops port (/health, /ready, /metrics) is not exposed.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: app-ingress
+  namespace: lightning-playground
+  labels:
+    app: backend
+  annotations:
+    # SSE (/stream-event): no buffering, and keep an idle stream open (nginx closes it after 60 s by default)
+    nginx.ingress.kubernetes.io/proxy-buffering: "off"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+spec:
+  rules:
+  - host: lightning-playground.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: backend
+            port:
+              name: backend

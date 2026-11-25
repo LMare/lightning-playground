@@ -24,26 +24,23 @@ target "common-app-args" {
 }
 
 group "compiler" {
-	targets = ["sidecar-compiler", "backend-compiler", "frontend-compiler"]
+	targets = ["sidecar-compiler", "backend-compiler"]
 }
 
 group "app-scratch" {
-	targets = ["backend-scratch", "frontend-scratch"]
+	targets = ["backend-scratch"]
 }
 group "app-alpine" {
-	targets = ["backend-alpine", "frontend-alpine"]
+	targets = ["backend-alpine"]
 }
 group "backend" {
 	targets = ["backend-alpine", "backend-scratch"]
-}
-group "frontend" {
-	targets = ["frontend-alpine", "frontend-scratch"]
 }
 group "sidecars" {
 	targets = ["sidecar-backend", "sidecar-lnd", "sidecar-btcd"]
 }
 group "default" {
-	targets = ["frontend", "backend", "btcd", "lnd", "sidecars"]
+	targets = ["backend", "btcd", "lnd", "sidecars"]
 }
 
 
@@ -70,30 +67,6 @@ target "backend-alpine" {
   target = "backend-alpine"
   inherits = ["common-app-args"]
   tags = ["LMare/lightning-playground-backend:${APP_VERSION}-alpine-${ALPINE_TAG}"]
-}
-
-target "frontend-compiler" {
-  context = "."
-  dockerfile = "./frontend/Dockerfile"
-  target = "compiler"
-  inherits = ["common-app-args"]
-  tags = ["frontend-compiler:latest"]
-}
-
-target "frontend-scratch" {
-  context = "."
-  dockerfile = "./frontend/Dockerfile"
-  target = "frontend-scratch"
-  inherits = ["common-app-args"]
-  tags = ["LMare/lightning-playground-frontend:${APP_VERSION}"]
-}
-
-target "frontend-alpine" {
-  context = "."
-  dockerfile = "./frontend/Dockerfile"
-  target = "frontend-alpine"
-  inherits = ["common-app-args"]
-  tags = ["LMare/lightning-playground-frontend:${APP_VERSION}-alpine-${ALPINE_TAG}"]
 }
 
 target "btcd" {

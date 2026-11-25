@@ -4,6 +4,8 @@ services:
   backend:
     image: LMare/lightning-playground-backend:${APP_VERSION}
     hostname: backend
+    ports:
+      - "3000:8080"   # app port only; the ops port (9090: health, ready, metrics) is not published
     depends_on:
       - postgres
     environment:
@@ -11,12 +13,6 @@ services:
     volumes:
       - lnd-0_data:/app/node-storage/lnd-0
       - lnd-1_data:/app/node-storage/lnd-1
-
-  frontend:
-    image: LMare/lightning-playground-frontend:${APP_VERSION}
-    hostname: frontend
-    ports:
-      - "${FRONTEND_PORT}:${FRONTEND_PORT}"
 
   postgres:
     image: postgres:${POSTGRES_TAG}
